@@ -404,9 +404,23 @@ router.get('/', checkPermission(Permissions.SERVERS_VIEW), async (req: any, res)
             `/api/v1/servers/${server.internalId}`
           );
           await updateServerState(server.id, status.state);
-          return { ...server, status };
+          return { 
+            ...server, 
+            status,
+            node: {
+              ...server.node,
+              connectionKey: undefined // Redact connectionKey
+            }
+          };
         } catch (error) {
-          return { ...server, status: { state: 'unknown' } };
+          return { 
+            ...server, 
+            status: { state: 'unknown' },
+            node: {
+              ...server.node,
+              connectionKey: undefined // Redact connectionKey
+            }
+          };
         }
       })
     );
@@ -421,7 +435,13 @@ router.get('/', checkPermission(Permissions.SERVERS_VIEW), async (req: any, res)
 router.get('/:id', checkPermission(Permissions.SERVERS_VIEW), async (req: any, res) => {
   try {
     const server = await checkServerAccess(req, req.params.id);
-    res.json(server);
+    res.json({
+      ...server,
+      node: {
+        ...server.node,
+        connectionKey: undefined // Redact connectionKey
+      }
+    });
   } catch (error: any) {
     if (error.message === 'Server not found') {
       return res.status(404).json({ error: 'Server not found' });
