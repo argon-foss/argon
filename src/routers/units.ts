@@ -1,3 +1,5 @@
+// Panel: src/routers/units.ts
+
 import { Router } from 'express';
 import { z } from 'zod';
 import { hasPermission } from '../permissions';

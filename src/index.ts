@@ -1,6 +1,6 @@
 /*
  * Argon version v0.0.0-dev (Revenant)
- * (c) 2017 - 2025 Matt James
+ * (c) 2017 - 2025 ether
  */
 
 import express from 'express';

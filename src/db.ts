@@ -6,6 +6,7 @@ import { createNodesRepository } from './db/nodes';
 import { createUnitsRepository } from './db/units';
 import { createAllocationsRepository } from './db/allocations';
 import { createServersRepository } from './db/servers';
+import { createCargoRepository } from './db/cargo';
 
 export class DB {
   private db: Database;
@@ -14,6 +15,7 @@ export class DB {
   readonly units;
   readonly allocations;
   readonly servers;
+  readonly cargo;
 
   constructor() {
     this.db = new Database('argon.db');
@@ -25,6 +27,7 @@ export class DB {
     this.units = createUnitsRepository(context);
     this.allocations = createAllocationsRepository(context);
     this.servers = createServersRepository(context);
+    this.cargo = createCargoRepository(context);
   }
 }
 

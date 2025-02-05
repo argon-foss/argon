@@ -1,3 +1,5 @@
+// Panel: src/db/units.ts
+
 import { randomUUID } from 'crypto';
 import { DatabaseContext, Unit, QueryOptions } from './types';
 import { buildWhereClause, buildOrderByClause, parseDate } from './utils';

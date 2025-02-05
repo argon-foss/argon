@@ -1,7 +1,9 @@
+// Panel: src/routers/servers.ts
+
 import { Router } from 'express';
 import { z } from 'zod';
 import { hasPermission } from '../permissions';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import axios from 'axios';
 import { db } from '../db';
 import { Permissions } from '../permissions';
@@ -10,6 +12,18 @@ import { authMiddleware, checkPermission } from '../middleware/auth';
 const router = Router();
 
 // Types
+interface CargoFile {
+  id: string;
+  url: string;
+  targetPath: string;
+  properties: {
+    hidden?: boolean;
+    readonly?: boolean;
+    noDelete?: boolean;
+    customProperties?: Record<string, any>;
+  };
+}
+
 interface DaemonServerConfig {
   dockerImage: string;
   variables: Array<{
@@ -28,6 +42,7 @@ interface DaemonServerConfig {
     entrypoint: string;
     script: string;
   };
+  cargo?: CargoFile[];
 }
 
 // Validation schemas
@@ -132,6 +147,51 @@ async function updateServerState(serverId: string, state: string) {
   );
 }
 
+async function generateCargoUrls(server: any, unit: any): Promise<CargoFile[]> {
+  if (!unit.cargoContainers?.length) {
+    return [];
+  }
+
+  const cargoFiles: CargoFile[] = [];
+
+  for (const container of unit.cargoContainers) {
+    const containerData = await db.cargo.findContainer(container.id);
+    if (!containerData) continue;
+
+    for (const item of containerData.items) {
+      const cargo = await db.cargo.findCargo(item.cargoId);
+      if (!cargo) continue;
+
+      if (cargo.type === 'local') {
+        // Generate a signed URL that expires in 15 minutes
+        const expiresAt = Math.floor(Date.now() / 1000) + 900;
+        const signature = createHash('sha256')
+          .update(`${cargo.id}:${server.id}:${expiresAt}:${process.env.APP_KEY}`)
+          .digest('hex');
+
+        const url = `/api/cargo/${cargo.id}/download?serverId=${server.id}&expires=${expiresAt}&signature=${signature}`;
+
+        cargoFiles.push({
+          id: cargo.id,
+          url: `${process.env.APP_URL}${url}`,
+          targetPath: item.targetPath,
+          properties: cargo.properties
+        });
+      } else if (cargo.type === 'remote') {
+        // For remote cargo, use the remote URL directly
+        cargoFiles.push({
+          id: cargo.id,
+          url: cargo.remoteUrl!,
+          targetPath: item.targetPath,
+          properties: cargo.properties
+        });
+      }
+    }
+  }
+
+  return cargoFiles;
+}
+
 // PUBLIC ROUTES
 router.get('/:internalId/config', async (req, res) => {
   try {
@@ -168,44 +228,41 @@ router.get('/:internalId/config', async (req, res) => {
   }
 });
 
-router.get('/:internalId/validate', authMiddleware, async (req: any, res) => {
+router.get('/:internalId/config', async (req, res) => {
   try {
     const server = await db.servers.findFirst({
       where: { internalId: req.params.internalId },
-      include: {
-        node: true,
-        user: true
-      }
+      include: { unit: true }
     });
 
-    if (!server?.node) {
-      return res.status(404).json({ error: 'Server or node not found' });
+    if (!server) {
+      return res.status(404).json({ error: 'Server not found' });
     }
 
-    // Check if user has access
-    const isAdmin = hasPermission(req.user.permissions, Permissions.ADMIN);
-    const hasAccess = isAdmin || server.userId === req.user.id;
+    // Generate cargo URLs
+    const cargoFiles = await generateCargoUrls(server, server.unit);
 
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const config: DaemonServerConfig = {
+      dockerImage: server.unit!.dockerImage,
+      variables: server.unit!.environmentVariables.map(v => ({
+        name: v.name,
+        description: v.description,
+        defaultValue: v.defaultValue,
+        rules: v.rules
+      })),
+      startupCommand: server.unit!.defaultStartupCommand,
+      configFiles: server.unit!.configFiles,
+      install: {
+        dockerImage: server.unit!.installScript.dockerImage,
+        entrypoint: server.unit!.installScript.entrypoint || 'bash',
+        script: server.unit!.installScript.script || '# No installation script provided'
+      },
+      cargo: cargoFiles
+    };
 
-    res.json({
-      validated: true,
-      server: {
-        id: server.id,
-        name: server.name,
-        internalId: server.internalId,
-        node: {
-          id: server.node.id,
-          name: server.node.name,
-          fqdn: server.node.fqdn,
-          port: server.node.port
-        }
-      }
-    });
+    res.json(config);
   } catch (error) {
-    console.error('Failed to validate server access:', error);
+    console.error('Failed to fetch server config:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -331,6 +388,34 @@ router.post('/', checkPermission(Permissions.ADMIN_SERVERS_CREATE), async (req: 
       return res.status(400).json({ error: error.errors });
     }
     console.error('Failed to create server:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/:id/cargo/ship', checkPermission(Permissions.SERVERS_MANAGE), async (req: any, res) => {
+  try {
+    const server = await checkServerAccess(req, req.params.id);
+
+    // Generate fresh cargo URLs
+    const cargoFiles = await generateCargoUrls(server, server.unit);
+
+    // Send cargo update to daemon
+    await makeDaemonRequest(
+      'post',
+      server.node!,
+      `/api/v1/servers/${server.internalId}/cargo/ship`,
+      { cargo: cargoFiles }
+    );
+
+    res.status(204).send();
+  } catch (error: any) {
+    if (error.message === 'Server not found') {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+    if (error.message === 'Access denied') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    console.error('Failed to ship cargo:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

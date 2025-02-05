@@ -1,10 +1,10 @@
 ARGON OPEN SOURCE LICENSE - 30 JAN 2025
 
-Copyright (c) 2025 Argon Labs (Matt James and contributors)
+Copyright (c) 2025 Argon Labs (ether and contributors)
 
 Portions of this software are derived from or utilize:
 - Pterodactyl Panel, Copyright (c) 2015 - 2025 Pterodactyl Software
-- Skyport Labs, Copyright (c) 2023 - 2024 Matt James and contributors
+- Skyport Labs, Copyright (c) 2023 - 2024 ether and contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), including but not limited to the Argon panel, its Krypton daemon, Argon units (software images), and Argon Labs owned Docker images (collectively "Argon"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -19,7 +19,7 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 
 3. This license explicitly excludes Argon Docker images that incorporate or are derived from Pterodactyl Panel images. Such images are subject to Pterodactyl Panel's original license terms and copyright.
 
-4. Any code derived from or utilizing Skyport Labs must maintain appropriate attribution and copyright notices as specified by Matt James and contributors.
+4. Any code derived from or utilizing Skyport Labs must maintain appropriate attribution and copyright notices as specified by ether and contributors.
 
 5. Argon Cargo, including its storage and image shipping service features, is a protected feature of Argon. Any derivative works, forks, or similar implementations that incorporate or are inspired by Argon Cargo's functionality must explicitly attribute and acknowledge that their implementation is derived from or inspired by Argon Cargo. This attribution must be clearly visible in the project's documentation, source code, and user interface where applicable.
 
