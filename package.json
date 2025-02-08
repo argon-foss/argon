@@ -1,5 +1,6 @@
 {
   "name": "argon-api",
+  "author": "Octant, Inc.",
   "version": "1.0.0",
   "scripts": {
     "dev": "bun --watch src/index.ts",
