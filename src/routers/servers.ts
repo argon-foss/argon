@@ -268,16 +268,17 @@ router.get('/:internalId/config', async (req, res) => {
 });
 
 // Panel side
-router.post('/validate/:serverId', async (req, res) => {
+router.get('/:internalId/validate/:token', async (req, res) => {
   try {
-    const { serverId } = req.params;
-    const { validationToken } = req.body;
+    const { internalId } = req.params;
+    const validationToken = req.params.token;
 
     // Debug logging
-    console.log('Validation request received:', { serverId, validationToken });
+    console.log('Validation request received:', { internalId, validationToken });
 
     const server = await db.servers.findFirst({
-      where: { id: serverId }
+      where: { internalId: internalId },
+      include: { node: true }
     });
 
     console.log('Server found:', server);
@@ -295,7 +296,21 @@ router.post('/validate/:serverId', async (req, res) => {
       return res.status(403).json({ error: 'Invalid validation token' });
     }
 
-    res.json({ valid: true });
+    // Return the format expected by the daemon
+    res.json({
+      validated: true,
+      server: {
+        id: server.id,
+        name: server.name,
+        internalId: server.internalId,
+        node: {
+          id: server.node.id,
+          name: server.node.name,
+          fqdn: server.node.fqdn,
+          port: server.node.port
+        }
+      }
+    });
   } catch (error) {
     console.error('Server validation failed:', error);
     res.status(500).json({ error: 'Internal server error' });
