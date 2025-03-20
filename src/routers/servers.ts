@@ -57,7 +57,6 @@ const createServerSchema = z.object({
   userId: z.string().uuid()
 });
 
-// Helper Functions
 async function makeDaemonRequest(
   method: 'get' | 'post' | 'delete',
   node: { fqdn: string; port: number; connectionKey: string } | null | undefined,
@@ -75,7 +74,7 @@ async function makeDaemonRequest(
       url,
       data,
       headers: {
-        'X-API-Key': node.connectionKey
+        'X-API-Key': node.connectionKey  // This matches the middleware in Krypton
       },
       timeout: 10000
     });

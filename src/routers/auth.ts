@@ -66,26 +66,4 @@ router.get('/state', authMiddleware, (req, res) => {
   });
 });
 
-// Admin routes for managing permissions
-router.put(
-  '/users/:userId/permissions',
-  authMiddleware,
-  requirePermission(Permissions.ADMIN_NODES),
-  async (req, res) => {
-    const { permissions } = req.body;
-    const { userId } = req.params;
-
-    if (!Array.isArray(permissions)) {
-      return res.status(400).json({ error: 'Permissions must be an array' });
-    }
-
-    const success = await db.users.updateUserPermissions(userId, permissions);
-    if (!success) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    res.json({ success: true });
-  }
-);
-
 export default router;
