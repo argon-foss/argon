@@ -6,5 +6,4 @@ package-lock.json
 uploads/
 _dist/
 backups/
-migrations/
 src/cli/deploy.json

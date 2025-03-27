@@ -1,4 +1,13 @@
-export const initSchema = (db) => {
+/**
+ * Migration: initial_schema
+ * Generated: 2025-03-27T00:00:00.000Z
+ */
+
+// @ts-ignore
+import { Database } from 'bun:sqlite';
+
+export function up(db: Database) {
+  // Write your migration code here
   db.exec(`
     PRAGMA foreign_keys = ON;
 
@@ -6,7 +15,7 @@ export const initSchema = (db) => {
       id TEXT PRIMARY KEY,
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
-      permissions TEXT NOT NULL DEFAULT '[]',
+      permissions INTEGER NOT NULL DEFAULT 0,
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL
     );
@@ -115,4 +124,26 @@ export const initSchema = (db) => {
     CREATE INDEX IF NOT EXISTS idx_unit_cargo_containers_unit_id ON unit_cargo_containers(unit_id);
     CREATE INDEX IF NOT EXISTS idx_unit_cargo_containers_container_id ON unit_cargo_containers(container_id);
   `);
-};
+}
+
+export function down(db: Database) {
+  // Write your rollback code here
+  db.exec(`
+    DROP INDEX IF EXISTS idx_unit_cargo_containers_container_id;
+    DROP INDEX IF EXISTS idx_unit_cargo_containers_unit_id;
+    DROP INDEX IF EXISTS idx_cargo_hash;
+    DROP INDEX IF EXISTS idx_allocations_serverid;
+    DROP INDEX IF EXISTS idx_allocations_nodeid;
+    DROP INDEX IF EXISTS idx_servers_nodeid;
+    DROP INDEX IF EXISTS idx_servers_userid;
+    
+    DROP TABLE IF EXISTS unit_cargo_containers;
+    DROP TABLE IF EXISTS cargo_containers;
+    DROP TABLE IF EXISTS cargo;
+    DROP TABLE IF EXISTS servers;
+    DROP TABLE IF EXISTS allocations;
+    DROP TABLE IF EXISTS units;
+    DROP TABLE IF EXISTS nodes;
+    DROP TABLE IF EXISTS users;
+  `);
+}
