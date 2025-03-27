@@ -17,6 +17,10 @@ const __dirname = dirname(__filename);
 const PROJECT_ROOT = join(__dirname, '..');
 const MIGRATIONS_DIR = join(PROJECT_ROOT, 'migrations');
 
+// Environment detection
+const isMigrationCommand = process.argv.includes('bolt') && 
+                          process.argv.includes('migrate');
+
 export class DB {
   private db: Database;
   readonly users;
@@ -32,16 +36,48 @@ export class DB {
     // Enable foreign keys
     this.db.exec('PRAGMA foreign_keys = ON;');
     
-    // Validate database schema
-    this.validateSchema();
+    // Skip validation if we're running a migration command
+    if (!isMigrationCommand) {
+      this.validateSchema();
+    } else {
+      // For migration commands, just ensure migrations table exists
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS migrations (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          executed_at TEXT NOT NULL
+        );
+      `);
+    }
 
     const context = { db: this.db };
-    this.users = createUsersRepository(context);
-    this.nodes = createNodesRepository(context);
-    this.units = createUnitsRepository(context);
-    this.allocations = createAllocationsRepository(context);
-    this.servers = createServersRepository(context);
-    this.cargo = createCargoRepository(context);
+    
+    // Only initialize repositories if we're not running migrations or if schema is valid
+    if (isMigrationCommand || this.isSchemaValid()) {
+      this.users = createUsersRepository(context);
+      this.nodes = createNodesRepository(context);
+      this.units = createUnitsRepository(context);
+      this.allocations = createAllocationsRepository(context);
+      this.servers = createServersRepository(context);
+      this.cargo = createCargoRepository(context);
+    }
+  }
+
+  private isSchemaValid(): boolean {
+    const requiredTables = [
+      'users', 'nodes', 'units', 'allocations', 'servers', 
+      'cargo', 'cargo_containers', 'unit_cargo_containers'
+    ];
+
+    const existingTables = this.db.query(`
+      SELECT name FROM sqlite_master 
+      WHERE type='table' AND name NOT LIKE 'sqlite_%'
+    `).all() as { name: string }[];
+
+    const existingTableNames = new Set(existingTables.map(t => t.name));
+    const missingTables = requiredTables.filter(t => !existingTableNames.has(t));
+
+    return missingTables.length === 0;
   }
 
   private validateSchema() {
@@ -76,9 +112,9 @@ export class DB {
         console.error(chalk.blue('  argon bolt migrate --run'));
       } else {
         console.error(chalk.yellow('\nInitial migration not found. Please ensure you have the init_schema migration in your migrations folder:'));
-        console.error(chalk.blue('  migrations/init_schema.ts'));
+        console.error(chalk.blue('  migrations/[timestamp]_init_schema.ts'));
         console.error(chalk.yellow('\nThen run migrations:'));
-        console.error(chalk.blue('  bun argon bolt migrate --run'));
+        console.error(chalk.blue('  argon bolt migrate --run'));
       }
       
       process.exit(1);
