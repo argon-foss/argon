@@ -192,6 +192,167 @@ async function generateCargoUrls(server: any, unit: any): Promise<CargoFile[]> {
 }
 
 // PUBLIC ROUTES
+router.get('/:serverId/cargo-files', async (req, res) => {
+  try {
+    const { serverId } = req.params;
+    const { token } = req.query;
+
+    // If there's a token, validate it (daemon request)
+    if (token) {
+      const server = await db.servers.findUnique({ 
+        where: { id: serverId }
+      });
+
+      if (!server) {
+        return res.status(404).json({ error: 'Server not found' });
+      }
+
+      // Verify the token matches the server's validation token
+      if (server.validationToken !== token) {
+        return res.status(403).json({ error: 'Invalid token' });
+      }
+    } else {
+      // Otherwise, require authentication (admin panel request)
+      if (!req.user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const server = await db.servers.findUnique({ where: { id: serverId } });
+      if (!server) {
+        return res.status(404).json({ error: 'Server not found' });
+      }
+
+      // Check if user has permission or is server owner
+      const isAdmin = hasPermission(req.user.permissions, 'admin.servers.view');
+      const isOwner = server.userId === req.user.id;
+      
+      if (!isAdmin && !isOwner) {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
+    }
+
+    // Get the server with its unit
+    const server = await db.servers.findUnique({ 
+      where: { id: serverId }
+    });
+
+    if (!server) {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+
+    // Get all containers assigned to this unit
+    const unitContainers = await db.units.getUnitCargoContainers(server.unitId);
+
+    // Prepare the cargo files list
+    const cargoFiles: CargoFile[] = [];
+
+    // For each container, get its cargo items
+    for (const container of unitContainers) {
+      if (container.items && Array.isArray(container.items)) {
+        // For each item in the container, get the cargo details
+        for (const item of container.items) {
+          const cargo = await db.cargo.findCargo(item.cargoId);
+          
+          if (cargo) {
+            // Add to the cargo files list
+            cargoFiles.push({
+              id: cargo.id,
+              url: `${req.protocol}://${req.headers.host}/api/cargo/${cargo.id}/download`, // Full URL for daemon
+              targetPath: item.targetPath,
+              properties: cargo.properties || {
+                hidden: false,
+                readonly: false,
+                noDelete: false
+              }
+            });
+          }
+        }
+      }
+    }
+
+    res.json({ cargoFiles });
+  } catch (error) {
+    console.error('Failed to get cargo files:', error);
+    res.status(500).json({ error: 'Failed to get cargo files' });
+  }
+});
+
+// Add a ship cargo endpoint to manually trigger cargo shipping to a server
+router.post('/:serverId/cargo/ship', authMiddleware, async (req, res) => {
+  try {
+    const { serverId } = req.params;
+    
+    // Verify server exists
+    const server = await db.servers.findUnique({ 
+      where: { id: serverId },
+      include: { node: true, unit: true }  
+    });
+    
+    if (!server) {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+    
+    // Check permissions
+    if (!hasPermission(req.user?.permissions, 'admin.servers.modify')) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+    
+    if (!server.node) {
+      return res.status(400).json({ error: 'Server has no node assigned' });
+    }
+
+    if (!server.unit) {
+      return res.status(400).json({ error: 'Server has no unit assigned' });
+    }
+    
+    // Get all unit containers and their cargo files
+    const unitContainers = await db.cargo.getUnitContainers(server.unitId);
+    const cargoFiles: CargoFile[] = [];
+    
+    // For each container, get its cargo items
+    for (const container of unitContainers) {
+      if (container.items) {
+        for (const item of container.items) {
+          const cargo = await db.cargo.findCargo(item.cargoId);
+          
+          if (cargo) {
+            cargoFiles.push({
+              id: cargo.id,
+              url: `${req.protocol}://${req.headers.host}/api/cargo/${cargo.id}/download`,
+              targetPath: item.targetPath,
+              properties: cargo.properties
+            });
+          }
+        }
+      }
+    }
+    
+    // Send cargo files to daemon
+    const daemonUrl = `http://${server.node.address}:${server.node.daemonPort}/api/servers/${serverId}/cargo/ship`;
+    
+    try {
+      const axios = require('axios');
+      await axios.post(daemonUrl, { cargo: cargoFiles }, {
+        headers: {
+          'Authorization': `Bearer ${server.node.daemonKey}`
+        }
+      });
+      
+      res.json({ message: 'Cargo shipped successfully' });
+    } catch (daemonError) {
+      console.error('Daemon error:', daemonError.response?.data || daemonError.message);
+      res.status(500).json({ 
+        error: 'Failed to ship cargo to daemon',
+        message: daemonError.response?.data?.error || daemonError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('Failed to ship cargo:', error);
+    res.status(500).json({ error: 'Failed to ship cargo' });
+  }
+});
+
 router.get('/:internalId/config', async (req, res) => {
   try {
     const server = await db.servers.findFirst({

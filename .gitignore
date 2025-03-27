@@ -3,3 +3,8 @@ argon.db
 bun.lockb
 package-lock.json
 .DS_Store
+uploads/
+_dist/
+backups/
+migrations/
+src/cli/deploy.json

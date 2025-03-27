@@ -244,4 +244,69 @@ router.post('/import', checkPermission('admin.units.create'), upload.single('fil
   }
 });
 
+// Get all cargo containers assigned to a unit
+router.get('/:id/containers', checkPermission('admin.units.list'), async (req, res) => {
+  try {
+    const unit = await db.units.findUnique({ id: req.params.id });
+
+    if (!unit) {
+      return res.status(404).json({ error: 'Unit not found' });
+    }
+
+    const containers = await db.units.getUnitCargoContainers(req.params.id);
+    res.json(containers);
+  } catch (error) {
+    console.error('Failed to fetch unit containers:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Assign a cargo container to a unit
+router.post('/:unitId/containers/:containerId', checkPermission('admin.units.modify'), async (req, res) => {
+  try {
+    const { unitId, containerId } = req.params;
+    
+    // Verify unit exists
+    const unit = await db.units.findUnique({ id: unitId });
+    if (!unit) {
+      return res.status(404).json({ error: 'Unit not found' });
+    }
+    
+    // Verify container exists
+    const container = await db.cargo.findContainer(containerId);
+    if (!container) {
+      return res.status(404).json({ error: 'Container not found' });
+    }
+    
+    // Assign container to unit
+    await db.units.assignCargoContainer(unitId, containerId);
+    
+    res.status(204).send();
+  } catch (error) {
+    console.error('Failed to assign container to unit:', error);
+    res.status(500).json({ error: 'Failed to assign container' });
+  }
+});
+
+// Remove a cargo container from a unit
+router.delete('/:unitId/containers/:containerId', checkPermission('admin.units.modify'), async (req, res) => {
+  try {
+    const { unitId, containerId } = req.params;
+    
+    // Verify unit exists
+    const unit = await db.units.findUnique({ id: unitId });
+    if (!unit) {
+      return res.status(404).json({ error: 'Unit not found' });
+    }
+    
+    // Remove container from unit
+    await db.units.removeCargoContainer(unitId, containerId);
+    
+    res.status(204).send();
+  } catch (error) {
+    console.error('Failed to remove container from unit:', error);
+    res.status(500).json({ error: 'Failed to remove container' });
+  }
+});
+
 export default router;

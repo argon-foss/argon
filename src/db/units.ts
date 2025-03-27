@@ -135,6 +135,41 @@ export function createUnitsRepository({ db }: DatabaseContext) {
       if (result.changes === 0) {
         throw new Error('Unit not found');
       }
+    },
+
+    // Get cargo containers for a unit
+    getUnitCargoContainers: async (unitId: string) => {
+      const rows = db.prepare(`
+        SELECT cc.* 
+        FROM cargo_containers cc
+        JOIN unit_cargo_containers ucc ON cc.id = ucc.container_id
+        WHERE ucc.unit_id = ?
+      `).all(unitId) as any[];
+
+      return rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        items: JSON.parse(row.items || '[]'),
+        createdAt: parseDate(row.createdAt),
+        updatedAt: parseDate(row.updatedAt)
+      }));
+    },
+
+    // Assign a cargo container to a unit
+    assignCargoContainer: async (unitId: string, containerId: string) => {
+      db.prepare(`
+        INSERT OR IGNORE INTO unit_cargo_containers (unit_id, container_id, created_at)
+        VALUES (?, ?, datetime('now'))
+      `).run(unitId, containerId);
+    },
+
+    // Remove a cargo container from a unit
+    removeCargoContainer: async (unitId: string, containerId: string) => {
+      db.prepare(`
+        DELETE FROM unit_cargo_containers
+        WHERE unit_id = ? AND container_id = ?
+      `).run(unitId, containerId);
     }
   };
 
