@@ -7,6 +7,7 @@ import express from 'express';
 import { join } from 'path';
 import { loadRouters } from './utils/routes_loader';
 import { PORT } from './config';
+import chalk from 'chalk';
 
 const app = express();
 
@@ -16,5 +17,6 @@ const routersDir = join(__dirname, 'routers');
 app.use(loadRouters(routersDir));
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(chalk.italic('Tell all my competition that I love \'em but I brought \'em back just to kill \'em again'));
+  console.log(`Argon v1.0.0-dev (Revenant) - running on port ${PORT}`);
 });
