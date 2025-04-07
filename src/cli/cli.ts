@@ -68,6 +68,29 @@ try {
 
 const program = new Command();
 
+program
+  .command('where')
+  .description('Show which Argon instance this CLI is operating on')
+  .action(() => {
+    console.log(chalk.blue(`Argon CLI location: ${__filename}`));
+    console.log(chalk.blue(`Project root: ${PROJECT_ROOT}`));
+    console.log(chalk.blue(`Database location: ${join(PROJECT_ROOT, 'argon.db')}`));
+    
+    // Check if this appears to be a valid Argon installation
+    const packageJsonPath = join(PROJECT_ROOT, 'package.json');
+    if (existsSync(packageJsonPath)) {
+      try {
+        const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+        console.log(chalk.blue(`Package name: ${packageJson.name}`));
+        console.log(chalk.blue(`Version: ${packageJson.version}`));
+      } catch (error) {
+        console.error(chalk.yellow(`Could not read package.json: ${error.message}`));
+      }
+    } else {
+      console.warn(chalk.yellow(`Warning: This doesn't appear to be a valid Argon installation (no package.json found)`));
+    }
+  });
+  
 // Setup CLI metadata
 program
   .name('argon')
