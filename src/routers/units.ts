@@ -67,7 +67,7 @@ const checkPermission = (permission: string) => (req: any, res: any, next: any) 
 };
 
 // List all units
-router.get('/', checkPermission('admin.units.list'), async (req, res) => {
+router.get('/', checkPermission('admin'), async (req, res) => {
   try {
     const units = await db.units.findMany({ 
       orderBy: { name: 'asc' }
@@ -80,7 +80,7 @@ router.get('/', checkPermission('admin.units.list'), async (req, res) => {
 });
 
 // Get specific unit
-router.get('/:id', checkPermission('admin.units.list'), async (req, res) => {
+router.get('/:id', checkPermission('admin'), async (req, res) => {
   try {
     const unit = await db.units.findUnique({ id: req.params.id });
 
@@ -96,7 +96,7 @@ router.get('/:id', checkPermission('admin.units.list'), async (req, res) => {
 });
 
 // Create unit
-router.post('/', checkPermission('admin.units.create'), async (req, res) => {
+router.post('/', checkPermission('admin'), async (req, res) => {
   try {
     const data = unitSchema.parse(req.body);
 
@@ -128,7 +128,7 @@ router.post('/', checkPermission('admin.units.create'), async (req, res) => {
 });
 
 // Update unit
-router.patch('/:id', checkPermission('admin.units.modify'), async (req, res) => {
+router.patch('/:id', checkPermission('admin'), async (req, res) => {
   try {
     const data = unitSchema.partial().parse(req.body);
 
@@ -159,7 +159,7 @@ router.patch('/:id', checkPermission('admin.units.modify'), async (req, res) => 
 });
 
 // Delete unit
-router.delete('/:id', checkPermission('admin.units.delete'), async (req, res) => {
+router.delete('/:id', checkPermission('admin'), async (req, res) => {
   try {
     // Check if unit is in use by any servers
     const servers = await db.servers.findMany({
@@ -179,7 +179,7 @@ router.delete('/:id', checkPermission('admin.units.delete'), async (req, res) =>
 });
 
 // Export unit configuration
-router.get('/:id/export', checkPermission('admin.units.list'), async (req, res) => {
+router.get('/:id/export', checkPermission('admin'), async (req, res) => {
   try {
     const unit = await db.units.findUnique({ id: req.params.id });
 
@@ -208,7 +208,7 @@ router.get('/:id/export', checkPermission('admin.units.list'), async (req, res) 
 });
 
 // Import unit configuration
-router.post('/import', checkPermission('admin.units.create'), upload.single('file'), async (req, res) => {
+router.post('/import', checkPermission('admin'), upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -245,7 +245,7 @@ router.post('/import', checkPermission('admin.units.create'), upload.single('fil
 });
 
 // Get all cargo containers assigned to a unit
-router.get('/:id/containers', checkPermission('admin.units.list'), async (req, res) => {
+router.get('/:id/containers', checkPermission('admin'), async (req, res) => {
   try {
     const unit = await db.units.findUnique({ id: req.params.id });
 
@@ -262,7 +262,7 @@ router.get('/:id/containers', checkPermission('admin.units.list'), async (req, r
 });
 
 // Assign a cargo container to a unit
-router.post('/:unitId/containers/:containerId', checkPermission('admin.units.modify'), async (req, res) => {
+router.post('/:unitId/containers/:containerId', checkPermission('admin'), async (req, res) => {
   try {
     const { unitId, containerId } = req.params;
     
@@ -289,7 +289,7 @@ router.post('/:unitId/containers/:containerId', checkPermission('admin.units.mod
 });
 
 // Remove a cargo container from a unit
-router.delete('/:unitId/containers/:containerId', checkPermission('admin.units.modify'), async (req, res) => {
+router.delete('/:unitId/containers/:containerId', checkPermission('admin'), async (req, res) => {
   try {
     const { unitId, containerId } = req.params;
     

@@ -7,3 +7,4 @@ uploads/
 _dist/
 backups/
 src/cli/deploy.json
+.env

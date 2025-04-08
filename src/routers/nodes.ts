@@ -74,7 +74,7 @@ function checkPermission(permission: string) {
 }
 
 // Node Routes
-router.get('/', checkPermission('admin.nodes.list'), async (req, res) => {
+router.get('/', checkPermission('admin'), async (req, res) => {
   try {
     const nodes = await db.nodes.findMany();
     
@@ -108,7 +108,7 @@ router.get('/', checkPermission('admin.nodes.list'), async (req, res) => {
   }
 });
 
-router.get('/:id', checkPermission('admin.nodes.list'), async (req, res) => {
+router.get('/:id', checkPermission('admin'), async (req, res) => {
   try {
     const node = await db.nodes.findUnique({ id: req.params.id });
 
@@ -142,7 +142,7 @@ router.get('/:id', checkPermission('admin.nodes.list'), async (req, res) => {
   }
 });
 
-router.post('/', checkPermission('admin.nodes.create'), async (req, res) => {
+router.post('/', checkPermission('admin'), async (req, res) => {
   try {
     const validatedData = createNodeSchema.parse(req.body);
     
@@ -172,7 +172,7 @@ router.post('/', checkPermission('admin.nodes.create'), async (req, res) => {
   }
 });
 
-router.patch('/:id', checkPermission('admin.nodes.modify'), async (req, res) => {
+router.patch('/:id', checkPermission('admin'), async (req, res) => {
   try {
     const validatedData = updateNodeSchema.parse(req.body);
     
@@ -209,7 +209,7 @@ router.patch('/:id', checkPermission('admin.nodes.modify'), async (req, res) => 
   }
 });
 
-router.delete('/:id', checkPermission('admin.nodes.delete'), async (req, res) => {
+router.delete('/:id', checkPermission('admin'), async (req, res) => {
   try {
     const node = await db.nodes.findUnique({ id: req.params.id });
 
@@ -247,7 +247,7 @@ router.delete('/:id', checkPermission('admin.nodes.delete'), async (req, res) =>
 });
 
 // Allocation Routes
-router.post('/:id/allocations', checkPermission('admin.nodes.modify'), async (req, res) => {
+router.post('/:id/allocations', checkPermission('admin'), async (req, res) => {
   try {
     const node = await db.nodes.findUnique({ id: req.params.id });
     if (!node) {
@@ -321,7 +321,7 @@ router.post('/:id/allocations', checkPermission('admin.nodes.modify'), async (re
   }
 });
 
-router.delete('/:nodeId/allocations/:allocationId', checkPermission('admin.nodes.modify'), async (req, res) => {
+router.delete('/:nodeId/allocations/:allocationId', checkPermission('admin'), async (req, res) => {
   try {
     const allocation = await db.allocations.findUnique({ id: req.params.allocationId });
 

@@ -8,47 +8,8 @@
 export type Permission = typeof Permissions[keyof typeof Permissions];
 
 export const Permissions = {
-  // Admin wildcard
-  ADMIN: 'admin.*',
-
-  // Node management (all admin only)
-  ADMIN_NODES: 'admin.nodes.*',
-  ADMIN_NODES_LIST: 'admin.nodes.list',
-  ADMIN_NODES_CREATE: 'admin.nodes.create',
-  ADMIN_NODES_MODIFY: 'admin.nodes.modify',
-  ADMIN_NODES_DELETE: 'admin.nodes.delete',
-
-  // Unit management (all admin only)
-  ADMIN_UNITS: 'admin.units.*',
-  ADMIN_UNITS_LIST: 'admin.units.list',
-  ADMIN_UNITS_CREATE: 'admin.units.create',
-  ADMIN_UNITS_MODIFY: 'admin.units.modify',
-  ADMIN_UNITS_DELETE: 'admin.units.delete',
-
-  // Cargo management (all admin only)
-  ADMIN_CARGO: 'admin.cargo.*',
-  ADMIN_CARGO_LIST: 'admin.cargo.list',
-  ADMIN_CARGO_CREATE: 'admin.cargo.create',
-  ADMIN_CARGO_MODIFY: 'admin.cargo.modify',
-  ADMIN_CARGO_DELETE: 'admin.cargo.delete',
-
-  // Server management (admin)
-  ADMIN_SERVERS: 'admin.servers.*',
-  ADMIN_SERVERS_LIST: 'admin.servers.list',
-  ADMIN_SERVERS_CREATE: 'admin.servers.create', // Admin only
-  ADMIN_SERVERS_DELETE: 'admin.servers.delete', // Admin only
-  ADMIN_SERVERS_MODIFY: 'admin.servers.modify', // Admin only
-
-  // User management (admin only)
-  ADMIN_USERS: 'admin.users.*',
-  ADMIN_USERS_LIST: 'admin.users.list',
-  ADMIN_USERS_CREATE: 'admin.users.create',
-  ADMIN_USERS_MODIFY: 'admin.users.modify',
-  ADMIN_USERS_DELETE: 'admin.users.delete',
-
-  // Server access (user)
-  SERVERS_VIEW: 'servers.view',     // Can view their servers
-  SERVERS_MANAGE: 'servers.manage'  // Can modify, power control, reinstall their servers
+  ADMIN: 'admin',
+  USER: 'user'
 } as const;
 
 /**
@@ -57,8 +18,7 @@ export const Permissions = {
 export const PermissionSets = {
   // Default user permissions - basic server management
   DEFAULT: [
-    Permissions.SERVERS_VIEW,
-    Permissions.SERVERS_MANAGE
+    Permissions.USER
   ],
   
   // Full admin access

@@ -16,6 +16,15 @@ app.use(express.json());
 const routersDir = join(__dirname, 'routers');
 app.use(loadRouters(routersDir));
 
+// System API route
+app.get('/api/system', (req, res) => {
+  res.json({
+    name: process.env.PANEL_NAME || 'Argon',
+    version: '1.0.0',
+    'powered-by': 'Argon'
+  });
+});
+
 app.listen(PORT, () => {
   console.log(chalk.italic('Tell all my competition that I love \'em but I brought \'em back just to kill \'em again'));
   console.log(`Argon v1.0.0-dev (Revenant) - running on port ${PORT}`);

@@ -95,7 +95,7 @@ async function validateRemoteUrl(url: string): Promise<{ size: number; mimeType:
 // Upload local cargo
 router.post(
     '/upload',
-    checkPermission('admin.cargo.create'),
+    checkPermission('admin'),
     upload.single('file'),
     async (req: any, res) => {
         try {
@@ -145,7 +145,7 @@ router.post(
 );
 
 // Create remote cargo
-router.post('/remote', checkPermission('admin.cargo.create'), async (req, res) => {
+router.post('/remote', checkPermission('admin'), async (req, res) => {
     try {
         const data = createRemoteCargoSchema.parse(req.body);
 
@@ -172,7 +172,7 @@ router.post('/remote', checkPermission('admin.cargo.create'), async (req, res) =
 });
 
 // List all cargo
-router.get('/', checkPermission('admin.cargo.list'), async (req, res) => {
+router.get('/', checkPermission('admin'), async (req, res) => {
     try {
         const cargo = await db.cargo.findManyCargo();
         res.json(cargo);
@@ -183,7 +183,7 @@ router.get('/', checkPermission('admin.cargo.list'), async (req, res) => {
 });
 
 // Get specific cargo
-router.get('/:id', checkPermission('admin.cargo.list'), async (req, res) => {
+router.get('/:id', checkPermission('admin'), async (req, res) => {
     try {
         const cargo = await db.cargo.findCargo(req.params.id);
         if (!cargo) {
@@ -197,7 +197,7 @@ router.get('/:id', checkPermission('admin.cargo.list'), async (req, res) => {
 });
 
 // Download cargo file
-router.get('/:id/download', checkPermission('admin.cargo.list'), async (req, res) => {
+router.get('/:id/download', checkPermission('admin'), async (req, res) => {
     try {
         const cargo = await db.cargo.findCargo(req.params.id);
         if (!cargo) {
@@ -229,7 +229,7 @@ router.get('/:id/download', checkPermission('admin.cargo.list'), async (req, res
 });
 
 // Update cargo properties
-router.patch('/:id', checkPermission('admin.cargo.modify'), async (req, res) => {
+router.patch('/:id', checkPermission('admin'), async (req, res) => {
     try {
         const cargo = await db.cargo.findCargo(req.params.id);
         if (!cargo) {
@@ -254,7 +254,7 @@ router.patch('/:id', checkPermission('admin.cargo.modify'), async (req, res) => 
 });
 
 // Delete cargo
-router.delete('/:id', checkPermission('admin.cargo.delete'), async (req, res) => {
+router.delete('/:id', checkPermission('admin'), async (req, res) => {
     try {
         const cargo = await db.cargo.findCargo(req.params.id);
         if (!cargo) {
@@ -297,7 +297,7 @@ router.delete('/:id', checkPermission('admin.cargo.delete'), async (req, res) =>
 });
 
 // Create container
-router.post('/containers', checkPermission('admin.cargo.create'), async (req, res) => {
+router.post('/containers', checkPermission('admin'), async (req, res) => {
     try {
         const data = createContainerSchema.parse(req.body);
 
@@ -321,7 +321,7 @@ router.post('/containers', checkPermission('admin.cargo.create'), async (req, re
 });
 
 // List containers
-router.get('/containers', checkPermission('admin.cargo.list'), async (req, res) => {
+router.get('/containers', checkPermission('admin'), async (req, res) => {
     try {
         const containers = await db.cargo.findManyContainers();
         res.json(containers);
@@ -332,7 +332,7 @@ router.get('/containers', checkPermission('admin.cargo.list'), async (req, res) 
 });
 
 // Get specific container
-router.get('/containers/:id', checkPermission('admin.cargo.list'), async (req, res) => {
+router.get('/containers/:id', checkPermission('admin'), async (req, res) => {
     try {
         const container = await db.cargo.findContainer(req.params.id);
         if (!container) {
@@ -346,7 +346,7 @@ router.get('/containers/:id', checkPermission('admin.cargo.list'), async (req, r
 });
 
 // Update container
-router.patch('/containers/:id', checkPermission('admin.cargo.modify'), async (req, res) => {
+router.patch('/containers/:id', checkPermission('admin'), async (req, res) => {
     try {
         const data = createContainerSchema.partial().parse(req.body);
 
@@ -372,7 +372,7 @@ router.patch('/containers/:id', checkPermission('admin.cargo.modify'), async (re
 });
 
 // Delete container
-router.delete('/containers/:id', checkPermission('admin.cargo.delete'), async (req, res) => {
+router.delete('/containers/:id', checkPermission('admin'), async (req, res) => {
     try {
         // Check if container is assigned to any units
         const container = await db.cargo.findContainer(req.params.id);
@@ -389,7 +389,7 @@ router.delete('/containers/:id', checkPermission('admin.cargo.delete'), async (r
 });
 
 // Assign container to unit
-router.post('/containers/:containerId/units/:unitId', checkPermission('admin.cargo.modify'), async (req, res) => {
+router.post('/containers/:containerId/units/:unitId', checkPermission('admin'), async (req, res) => {
     try {
         await db.cargo.assignContainerToUnit(req.params.unitId, req.params.containerId);
         res.status(204).send();
@@ -400,7 +400,7 @@ router.post('/containers/:containerId/units/:unitId', checkPermission('admin.car
 });
 
 // Remove container from unit
-router.delete('/containers/:containerId/units/:unitId', checkPermission('admin.cargo.modify'), async (req, res) => {
+router.delete('/containers/:containerId/units/:unitId', checkPermission('admin'), async (req, res) => {
     try {
         await db.cargo.removeContainerFromUnit(req.params.unitId, req.params.containerId);
         res.status(204).send();

@@ -481,7 +481,7 @@ router.get('/:internalId/validate/:token', async (req, res) => {
 router.use(authMiddleware);
 
 // ADMIN ROUTES
-router.post('/', checkPermission(Permissions.ADMIN_SERVERS_CREATE), async (req: any, res) => {
+router.post('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
   try {
     const data = createServerSchema.parse(req.body);
     const serverId = randomUUID();
@@ -567,7 +567,7 @@ router.post('/', checkPermission(Permissions.ADMIN_SERVERS_CREATE), async (req: 
   }
 });
 
-router.post('/:id/cargo/ship', checkPermission(Permissions.SERVERS_MANAGE), async (req: any, res) => {
+router.post('/:id/cargo/ship', checkPermission(Permissions.USER), async (req: any, res) => {
   try {
     const server = await checkServerAccess(req, req.params.id);
 
@@ -595,7 +595,7 @@ router.post('/:id/cargo/ship', checkPermission(Permissions.SERVERS_MANAGE), asyn
   }
 });
 
-router.delete('/:id', checkPermission(Permissions.ADMIN_SERVERS_DELETE), async (req: any, res) => {
+router.delete('/:id', checkPermission(Permissions.ADMIN), async (req: any, res) => {
   try {
     const server = await db.servers.findUnique({
       where: { id: req.params.id },
@@ -639,7 +639,7 @@ router.delete('/:id', checkPermission(Permissions.ADMIN_SERVERS_DELETE), async (
 });
 
 // USER ROUTES
-router.get('/', checkPermission(Permissions.SERVERS_VIEW), async (req: any, res) => {
+router.get('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
   try {
     const isAdmin = hasPermission(req.user.permissions, Permissions.ADMIN);
     const where = isAdmin ? undefined : { userId: req.user.id };
@@ -692,7 +692,7 @@ router.get('/', checkPermission(Permissions.SERVERS_VIEW), async (req: any, res)
   }
 });
 
-router.get('/:id', checkPermission(Permissions.SERVERS_VIEW), async (req: any, res) => {
+router.get('/:id', checkPermission(Permissions.USER), async (req: any, res) => {
   try {
     const server = await checkServerAccess(req, req.params.id);
     res.json({
@@ -714,7 +714,7 @@ router.get('/:id', checkPermission(Permissions.SERVERS_VIEW), async (req: any, r
   }
 });
 
-router.post('/:id/power/:action', checkPermission(Permissions.SERVERS_MANAGE), async (req: any, res) => {
+router.post('/:id/power/:action', checkPermission(Permissions.USER), async (req: any, res) => {
   try {
     const { action } = req.params;
     
@@ -760,7 +760,7 @@ router.post('/:id/power/:action', checkPermission(Permissions.SERVERS_MANAGE), a
   }
 });
 
-router.post('/:id/reinstall', checkPermission(Permissions.SERVERS_MANAGE), async (req: any, res) => {
+router.post('/:id/reinstall', checkPermission(Permissions.USER), async (req: any, res) => {
   try {
     const server = await checkServerAccess(req, req.params.id);
 
