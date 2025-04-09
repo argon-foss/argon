@@ -94,6 +94,17 @@ export interface Server {
   };
   allocation?: Allocation;
   validationToken?: string;
+  projectId?: string | null;
+  project?: Project;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description?: string | null;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export type WhereInput<T> = Partial<{ [K in keyof T]: T[K] }>;

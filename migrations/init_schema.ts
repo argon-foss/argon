@@ -75,12 +75,14 @@ export function up(db: Database) {
       cpuPercent INTEGER NOT NULL,
       state TEXT NOT NULL,
       validationToken TEXT,
+      projectId TEXT,
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL,
       FOREIGN KEY(nodeId) REFERENCES nodes(id),
       FOREIGN KEY(unitId) REFERENCES units(id),
       FOREIGN KEY(userId) REFERENCES users(id),
-      FOREIGN KEY(allocationId) REFERENCES allocations(id)
+      FOREIGN KEY(allocationId) REFERENCES allocations(id),
+      FOREIGN KEY(projectId) REFERENCES projects(id) ON DELETE SET NULL
     );
 
     -- Cargo system tables
@@ -114,6 +116,16 @@ export function up(db: Database) {
       PRIMARY KEY (unit_id, container_id),
       FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE CASCADE,
       FOREIGN KEY (container_id) REFERENCES cargo_containers(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      userId TEXT NOT NULL,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL,
+      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
     );
 
     CREATE INDEX IF NOT EXISTS idx_servers_userid ON servers(userId);

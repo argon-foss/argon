@@ -143,7 +143,8 @@ export function createServersRepository({ db }: DatabaseContext) {
         node?: boolean, 
         allocation?: boolean, 
         unit?: boolean,
-        user?: boolean 
+        user?: boolean,
+        project?: boolean
       } 
     }): Promise<Server | null> => {
       const row = db.prepare('SELECT * FROM servers WHERE id = ?')
@@ -207,16 +208,74 @@ export function createServersRepository({ db }: DatabaseContext) {
             server.user = { id: user.id, username: user.username };
           }
         }
+        if (options.include.project && server.projectId) {
+          const project = db.prepare(
+            'SELECT * FROM projects WHERE id = ?'
+          ).get(server.projectId) as any;
+          
+          if (project) {
+            server.project = {
+              ...project,
+              createdAt: parseDate(project.createdAt),
+              updatedAt: parseDate(project.updatedAt)
+            };
+          }
+        }
       }
 
       return server;
     },
 
-    // Update the create function in servers.ts
-create: async (data: Omit<Server, 'id' | 'createdAt' | 'updatedAt'>): Promise<Server> => {
+// src/db/servers.ts - fixed create function
+create: async function(data: Omit<Server, 'id' | 'createdAt' | 'updatedAt'>): Promise<Server> {
+  // If no projectId is specified, we need to handle it differently
+  let projectId = data.projectId;
+  
+  if (!projectId) {
+    try {
+      // Access the projects repository from the db context
+      // This assumes db.projects is defined in your database context
+      if (db.projects && typeof db.projects.getOrCreateDefaultProject === 'function') {
+        const defaultProject = await db.projects.getOrCreateDefaultProject(data.userId);
+        projectId = defaultProject.id;
+      } else {
+        // Fallback approach if projects repository isn't available
+        // This will query the database directly to find the default project
+        const defaultProject = db.prepare(`
+          SELECT id FROM projects 
+          WHERE userId = ? AND name = 'Default'
+          LIMIT 1
+        `).get(data.userId) as any;
+        
+        if (defaultProject) {
+          projectId = defaultProject.id;
+        } else {
+          // Create a default project if it doesn't exist
+          const newProjectId = randomUUID();
+          db.prepare(`
+            INSERT INTO projects (id, name, description, userId, createdAt, updatedAt)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `).run(
+            newProjectId,
+            'Default',
+            'Default project',
+            data.userId,
+            new Date().toISOString(),
+            new Date().toISOString()
+          );
+          projectId = newProjectId;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to get default project:', error);
+      // Continue without a project ID if we can't get the default project
+    }
+  }
+  
   const server = {
     id: randomUUID(),
     ...data,
+    projectId,
     createdAt: new Date(),
     updatedAt: new Date()
   };
@@ -225,9 +284,9 @@ create: async (data: Omit<Server, 'id' | 'createdAt' | 'updatedAt'>): Promise<Se
     INSERT INTO servers (
       id, internalId, name, nodeId, unitId, userId,
       allocationId, memoryMiB, diskMiB, cpuPercent,
-      state, validationToken, createdAt, updatedAt
+      state, validationToken, projectId, createdAt, updatedAt
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     server.id,
     server.internalId,
@@ -241,6 +300,7 @@ create: async (data: Omit<Server, 'id' | 'createdAt' | 'updatedAt'>): Promise<Se
     server.cpuPercent,
     server.state,
     server.validationToken || null,
+    server.projectId,
     server.createdAt.toISOString(),
     server.updatedAt.toISOString()
   );
@@ -248,42 +308,42 @@ create: async (data: Omit<Server, 'id' | 'createdAt' | 'updatedAt'>): Promise<Se
   return server;
 },
 
-// Update the update function
-update: async function(where: { id: string }, data: Partial<Server>): Promise<Server> {
-  const current = await repository.findUnique({ where });
-  if (!current) throw new Error('Server not found');
-
-  const updated = {
-    ...current,
-    ...data,
-    updatedAt: new Date()
-  };
-
-  db.prepare(`
-    UPDATE servers
-    SET name = ?, nodeId = ?, unitId = ?, userId = ?,
-        allocationId = ?, memoryMiB = ?, diskMiB = ?,
-        cpuPercent = ?, state = ?, internalId = ?,
-        validationToken = ?, updatedAt = ?
-    WHERE id = ?
-  `).run(
-    updated.name,
-    updated.nodeId,
-    updated.unitId,
-    updated.userId,
-    updated.allocationId,
-    updated.memoryMiB,
-    updated.diskMiB,
-    updated.cpuPercent,
-    updated.state,
-    updated.internalId,
-    updated.validationToken || null,
-    updated.updatedAt.toISOString(),
-    where.id
-  );
-
-  return updated;
-},
+    update: async function(where: { id: string }, data: Partial<Server>): Promise<Server> {
+      const current = await repository.findUnique({ where });
+      if (!current) throw new Error('Server not found');
+    
+      const updated = {
+        ...current,
+        ...data,
+        updatedAt: new Date()
+      };
+    
+      db.prepare(`
+        UPDATE servers
+        SET name = ?, nodeId = ?, unitId = ?, userId = ?,
+            allocationId = ?, memoryMiB = ?, diskMiB = ?,
+            cpuPercent = ?, state = ?, internalId = ?,
+            validationToken = ?, projectId = ?, updatedAt = ?
+        WHERE id = ?
+      `).run(
+        updated.name,
+        updated.nodeId,
+        updated.unitId,
+        updated.userId,
+        updated.allocationId,
+        updated.memoryMiB,
+        updated.diskMiB,
+        updated.cpuPercent,
+        updated.state,
+        updated.internalId,
+        updated.validationToken || null,
+        updated.projectId || null,
+        updated.updatedAt.toISOString(),
+        where.id
+      );
+    
+      return updated;
+    },
 
     delete: async (where: { id: string }): Promise<void> => {
       const result = db.prepare('DELETE FROM servers WHERE id = ?').run(where.id);

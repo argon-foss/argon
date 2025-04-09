@@ -54,7 +54,8 @@ const createServerSchema = z.object({
   diskMiB: z.number().int().min(1024),
   cpuPercent: z.number().min(1).max(100),
   unitId: z.string().uuid(),
-  userId: z.string().uuid()
+  userId: z.string().uuid(),
+  projectId: z.string().uuid().optional() 
 });
 
 const updateServerSchema = z.object({
@@ -63,6 +64,7 @@ const updateServerSchema = z.object({
   diskMiB: z.number().int().min(1024).optional(),
   cpuPercent: z.number().min(1).max(100).optional(),
   unitId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional()
   // Note: We don't allow changing nodeId or allocationId here
   // as that would require server transfer
 });

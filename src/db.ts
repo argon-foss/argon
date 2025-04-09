@@ -6,6 +6,7 @@ import { createUnitsRepository } from './db/units';
 import { createAllocationsRepository } from './db/allocations';
 import { createServersRepository } from './db/servers';
 import { createCargoRepository } from './db/cargo';
+import { createProjectsRepository } from './db/projects';
 import chalk from 'chalk';
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
@@ -29,6 +30,7 @@ export class DB {
   readonly allocations;
   readonly servers;
   readonly cargo;
+  readonly projects;
 
   constructor(dbPath: string = 'argon.db') {
     this.db = new Database(dbPath);
@@ -60,13 +62,14 @@ export class DB {
       this.allocations = createAllocationsRepository(context);
       this.servers = createServersRepository(context);
       this.cargo = createCargoRepository(context);
+      this.projects = createProjectsRepository(context);
     }
   }
 
   private isSchemaValid(): boolean {
     const requiredTables = [
       'users', 'nodes', 'units', 'allocations', 'servers', 
-      'cargo', 'cargo_containers', 'unit_cargo_containers'
+      'cargo', 'cargo_containers', 'unit_cargo_containers', 'projects'
     ];
 
     const existingTables = this.db.query(`
@@ -84,7 +87,7 @@ export class DB {
     // Check if required tables exist
     const requiredTables = [
       'users', 'nodes', 'units', 'allocations', 'servers', 
-      'cargo', 'cargo_containers', 'unit_cargo_containers'
+      'cargo', 'cargo_containers', 'unit_cargo_containers', 'projects'
     ];
 
     const existingTables = this.db.query(`
