@@ -57,8 +57,18 @@ const createServerSchema = z.object({
   userId: z.string().uuid()
 });
 
+const updateServerSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  memoryMiB: z.number().int().min(128).optional(),
+  diskMiB: z.number().int().min(1024).optional(),
+  cpuPercent: z.number().min(1).max(100).optional(),
+  unitId: z.string().uuid().optional(),
+  // Note: We don't allow changing nodeId or allocationId here
+  // as that would require server transfer
+});
+
 async function makeDaemonRequest(
-  method: 'get' | 'post' | 'delete',
+  method: 'get' | 'post' | 'delete' | 'patch',
   node: { fqdn: string; port: number; connectionKey: string } | null | undefined,
   path: string,
   data?: any
@@ -293,7 +303,7 @@ router.post('/:serverId/cargo/ship', authMiddleware, async (req, res) => {
     }
     
     // Check permissions
-    if (!hasPermission(req.user?.permissions, 'admin.servers.modify')) {
+    if (!hasPermission(req.user?.permissions, 'admin')) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
     
@@ -563,6 +573,88 @@ router.post('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
       return res.status(400).json({ error: error.errors });
     }
     console.error('Failed to create server:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.patch('/:id', checkPermission(Permissions.ADMIN), async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = updateServerSchema.parse(req.body);
+    
+    // Get the current server data
+    const server = await db.servers.findUnique({
+      where: { id },
+      include: { 
+        node: true, 
+        allocation: true,
+        unit: true 
+      }
+    });
+
+    if (!server) {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+
+    if (!server.node) {
+      return res.status(400).json({ error: 'Server has no node assigned' });
+    }
+
+    // Check if unit is changing
+    let unitChanged = false;
+    let unitData = server.unit;
+    
+    if (updateData.unitId && updateData.unitId !== server.unitId) {
+      unitChanged = true;
+      // Get the new unit details
+      unitData = await db.units.findUnique({ id: updateData.unitId });
+      
+      if (!unitData) {
+        return res.status(404).json({ error: 'Unit not found' });
+      }
+    }
+
+    // Set server to updating state
+    await updateServerState(server.id, 'updating');
+
+    // Prepare data for the daemon
+    const daemonUpdateData = {
+      serverId: server.internalId,
+      name: updateData.name || server.name,
+      memoryLimit: (updateData.memoryMiB || server.memoryMiB) * 1024 * 1024, // Convert to bytes
+      cpuLimit: Math.floor((updateData.cpuPercent || server.cpuPercent) * 1024 / 100),
+      allocation: {
+        bindAddress: server.allocation!.bindAddress,
+        port: server.allocation!.port
+      },
+      unitChanged: unitChanged,
+      dockerImage: unitData!.dockerImage
+    };
+
+    // Send update request to daemon
+    await makeDaemonRequest(
+      'patch',
+      server.node,
+      `/api/v1/servers/${server.internalId}`,
+      daemonUpdateData
+    );
+
+    // Update the server in the database
+    const updatedServer = await db.servers.update(
+      { id: server.id },
+      { 
+        ...updateData,
+        state: 'running' // Reset state after update
+      }
+    );
+
+    res.json(updatedServer);
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error('Failed to update server:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -92,6 +92,17 @@ async function validateRemoteUrl(url: string): Promise<{ size: number; mimeType:
     }
 }
 
+router.get('/container', checkPermission('admin'), async (req, res) => {
+    try {
+      // Remove any cargo validation that might be causing the error
+      const containers = await db.cargo.findManyContainers();
+      res.json(containers);
+    } catch (error) {
+      console.error('Failed to list containers:', error);
+      res.status(500).json({ error: 'Failed to list containers' });
+    }
+});
+
 // Upload local cargo
 router.post(
     '/upload',
@@ -317,17 +328,6 @@ router.post('/containers', checkPermission('admin'), async (req, res) => {
         }
         console.error('Failed to create container:', error);
         res.status(500).json({ error: 'Failed to create container' });
-    }
-});
-
-// List containers
-router.get('/containers', checkPermission('admin'), async (req, res) => {
-    try {
-        const containers = await db.cargo.findManyContainers();
-        res.json(containers);
-    } catch (error) {
-        console.error('Failed to list containers:', error);
-        res.status(500).json({ error: 'Failed to list containers' });
     }
 });
 
