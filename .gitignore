@@ -8,3 +8,4 @@ _dist/
 backups/
 src/cli/deploy.json
 .env
+storage/
