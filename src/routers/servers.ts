@@ -495,12 +495,84 @@ router.use(authMiddleware);
 // ADMIN ROUTES
 router.post('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
   try {
+    // Modified schema to make nodeId and allocationId optional when regionId is provided
+    const createServerSchema = z.object({
+      name: z.string().min(1).max(100),
+      nodeId: z.string().uuid().optional(),
+      regionId: z.string().uuid().optional(),
+      allocationId: z.string().uuid().optional(),
+      memoryMiB: z.number().int().min(128),
+      diskMiB: z.number().int().min(1024),
+      cpuPercent: z.number().min(1).max(100),
+      unitId: z.string().uuid(),
+      userId: z.string().uuid(),
+      projectId: z.string().uuid().optional() 
+    }).refine(data => data.nodeId || data.regionId, {
+      message: "Either nodeId or regionId must be provided"
+    });
+
     const data = createServerSchema.parse(req.body);
     const serverId = randomUUID();
     const validationToken = randomUUID();
 
+    let nodeId = data.nodeId;
+    let allocationId = data.allocationId;
+
+    // If regionId is provided, find the best node in that region
+    if (data.regionId) {
+      // Check if region exists
+      const region = await db.regions.findUnique({ id: data.regionId });
+      if (!region) {
+        return res.status(404).json({ error: 'Region not found' });
+      }
+
+      // Check if region is at capacity
+      const isAtCapacity = await db.regions.isRegionAtCapacity(data.regionId);
+      if (isAtCapacity) {
+        return res.status(400).json({ error: 'Region has reached its server limit' });
+      }
+
+      // Find the best node in this region (or fallback if configured)
+      nodeId = await db.regions.findBestNodeInRegion(data.regionId);
+      
+      if (!nodeId) {
+        return res.status(400).json({ error: 'No available nodes found in region or its fallback' });
+      }
+
+      // If no allocation was specified, find an available one on this node
+      if (!allocationId) {
+        const allocation = await db.allocations.findFirst({
+          where: { nodeId, assigned: false }
+        });
+
+        if (!allocation) {
+          return res.status(400).json({ error: 'No available allocations found on selected node' });
+        }
+
+        allocationId = allocation.id;
+      }
+    } else {
+      // Regular node-based creation, but with allocation auto-assignment if needed
+      if (!nodeId) {
+        return res.status(400).json({ error: 'NodeId is required when regionId is not provided' });
+      }
+      
+      // If no allocation was specified, we'll automatically find one
+      if (!allocationId) {
+        const allocation = await db.allocations.findFirst({
+          where: { nodeId, assigned: false }
+        });
+
+        if (!allocation) {
+          return res.status(400).json({ error: 'No available allocations found on selected node' });
+        }
+
+        allocationId = allocation.id;
+      }
+    }
+
     // Verify node exists and is online
-    const node = await db.nodes.findUnique({ id: data.nodeId });
+    const node = await db.nodes.findUnique({ id: nodeId });
     if (!node) {
       return res.status(404).json({ error: 'Node not found' });
     }
@@ -509,14 +581,14 @@ router.post('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
     }
 
     // Verify allocation exists and is available
-    const allocation = await db.allocations.findUnique({ id: data.allocationId });
+    const allocation = await db.allocations.findUnique({ id: allocationId });
     if (!allocation) {
       return res.status(404).json({ error: 'Allocation not found' });
     }
     if (allocation.assigned) {
       return res.status(400).json({ error: 'Allocation is already in use' });
     }
-    if (allocation.nodeId !== data.nodeId) {
+    if (allocation.nodeId !== nodeId) {
       return res.status(400).json({ error: 'Allocation does not belong to selected node' });
     }
 
@@ -535,6 +607,8 @@ router.post('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
     // Create server in database with validation token
     const server = await db.servers.create({
       ...data,
+      nodeId,
+      allocationId,
       id: serverId,
       internalId: serverId,
       validationToken,
