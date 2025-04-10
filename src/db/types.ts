@@ -19,9 +19,10 @@ export interface Node {
   connectionKey: string;
   isOnline: boolean;
   lastChecked: Date;
+  regionId?: string | null; // reference to a region
+  region?: Region | null; // populated on queries when regionId exists
   createdAt: Date;
   updatedAt: Date;
-  allocations?: Allocation[];
 }
 
 export interface Allocation {
@@ -103,6 +104,19 @@ export interface Project {
   name: string;
   description?: string | null;
   userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Region {
+  id: string;
+  name: string;
+  identifier: string; // lowercase one-word identifier like "eu-north"
+  countryId?: string | null; // optional country code (e.g., "EU", "GB")
+  fallbackRegionId?: string | null; // ID of a fallback region
+  fallbackRegion?: Region | null; // Populated on queries when fallbackRegionId exists
+  serverLimit?: number | null; // Optional limit of servers in this region
+  nodes: Node[]; // Nodes in this region (populated on queries)
   createdAt: Date;
   updatedAt: Date;
 }

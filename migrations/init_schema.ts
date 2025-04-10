@@ -28,8 +28,10 @@ export function up(db: Database) {
       connectionKey TEXT NOT NULL,
       isOnline BOOLEAN NOT NULL DEFAULT FALSE,
       lastChecked TEXT NOT NULL,
+      regionId TEXT,
       createdAt TEXT NOT NULL,
-      updatedAt TEXT NOT NULL
+      updatedAt TEXT NOT NULL,
+      FOREIGN KEY(regionId) REFERENCES regions(id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS units (
@@ -128,6 +130,20 @@ export function up(db: Database) {
       FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS regions (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      identifier TEXT NOT NULL UNIQUE, -- lowercase one-word identifier
+      countryId TEXT, -- optional country code
+      fallbackRegionId TEXT, -- optional reference to another region
+      serverLimit INTEGER, -- optional server limit for the entire region
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL,
+      FOREIGN KEY (fallbackRegionId) REFERENCES regions(id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_nodes_region_id ON nodes(regionId);
+    CREATE INDEX IF NOT EXISTS idx_region_identifier ON regions(identifier);
     CREATE INDEX IF NOT EXISTS idx_servers_userid ON servers(userId);
     CREATE INDEX IF NOT EXISTS idx_servers_nodeid ON servers(nodeId);
     CREATE INDEX IF NOT EXISTS idx_allocations_nodeid ON allocations(nodeId);
@@ -139,7 +155,6 @@ export function up(db: Database) {
 }
 
 export function down(db: Database) {
-  // Write your rollback code here
   db.exec(`
     DROP INDEX IF EXISTS idx_unit_cargo_containers_container_id;
     DROP INDEX IF EXISTS idx_unit_cargo_containers_unit_id;

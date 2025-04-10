@@ -34,12 +34,47 @@ export function createNodesRepository({ db }: DatabaseContext) {
         : 'SELECT * FROM nodes';
 
       const rows = db.prepare(query).all(...values) as any[];
-      return rows.map(parseNodeRow);
+      
+      const nodes = rows.map(parseNodeRow);
+      
+      // Load region information if available
+      for (const node of nodes) {
+        if (node.regionId) {
+          const regionRow = db.prepare('SELECT * FROM regions WHERE id = ?').get(node.regionId) as any;
+          if (regionRow) {
+            node.region = {
+              ...regionRow,
+              serverLimit: regionRow.serverLimit ? Number(regionRow.serverLimit) : null,
+              createdAt: parseDate(regionRow.createdAt),
+              updatedAt: parseDate(regionRow.updatedAt)
+            };
+          }
+        }
+      }
+      
+      return nodes;
     },
 
     findUnique: async ({ id }: { id: string }): Promise<Node | null> => {
       const row = db.prepare('SELECT * FROM nodes WHERE id = ?').get(id) as any;
-      return row ? parseNodeRow(row) : null;
+      if (!row) return null;
+      
+      const node = parseNodeRow(row);
+      
+      // Load region information if available
+      if (node.regionId) {
+        const regionRow = db.prepare('SELECT * FROM regions WHERE id = ?').get(node.regionId) as any;
+        if (regionRow) {
+          node.region = {
+            ...regionRow,
+            serverLimit: regionRow.serverLimit ? Number(regionRow.serverLimit) : null,
+            createdAt: parseDate(regionRow.createdAt),
+            updatedAt: parseDate(regionRow.updatedAt)
+          };
+        }
+      }
+      
+      return node;
     },
 
     create: async (data: Omit<Node, 'id' | 'connectionKey' | 'createdAt' | 'updatedAt'>): Promise<Node> => {
@@ -54,9 +89,9 @@ export function createNodesRepository({ db }: DatabaseContext) {
       db.prepare(`
         INSERT INTO nodes (
           id, name, fqdn, port, connectionKey, isOnline, 
-          lastChecked, createdAt, updatedAt
+          lastChecked, regionId, createdAt, updatedAt
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         node.id,
         node.name,
@@ -65,6 +100,7 @@ export function createNodesRepository({ db }: DatabaseContext) {
         node.connectionKey,
         node.isOnline ? 1 : 0,
         node.lastChecked.toISOString(),
+        node.regionId || null,
         node.createdAt.toISOString(),
         node.updatedAt.toISOString()
       );
@@ -85,7 +121,7 @@ export function createNodesRepository({ db }: DatabaseContext) {
       db.prepare(`
         UPDATE nodes
         SET name = ?, fqdn = ?, port = ?, connectionKey = ?, 
-            isOnline = ?, lastChecked = ?, updatedAt = ?
+            isOnline = ?, lastChecked = ?, regionId = ?, updatedAt = ?
         WHERE id = ?
       `).run(
         updated.name,
@@ -94,6 +130,7 @@ export function createNodesRepository({ db }: DatabaseContext) {
         updated.connectionKey,
         updated.isOnline ? 1 : 0,
         updated.lastChecked.toISOString(),
+        updated.regionId || null,
         updated.updatedAt.toISOString(),
         id
       );

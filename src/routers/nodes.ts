@@ -73,6 +73,68 @@ function checkPermission(permission: string) {
   };
 }
 
+// Node Region Assignment
+router.patch('/:id/region', checkPermission('admin'), async (req, res) => {
+  try {
+    const schema = z.object({
+      regionId: z.string().uuid().nullable()
+    });
+    
+    const { regionId } = schema.parse(req.body);
+    
+    const node = await db.nodes.findUnique({ id: req.params.id });
+    
+    if (!node) {
+      return res.status(404).json({ error: 'Node not found' });
+    }
+    
+    // If regionId is provided, verify that the region exists
+    if (regionId) {
+      const region = await db.regions.findUnique({ id: regionId });
+      if (!region) {
+        return res.status(404).json({ error: 'Region not found' });
+      }
+    }
+    
+    // Update the node's region
+    const updatedNode = await db.nodes.update(
+      { id: req.params.id },
+      { regionId }
+    );
+    
+    res.json(updatedNode);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error('Error updating node region:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Add this endpoint to list all nodes in a region
+router.get('/region/:regionId', checkPermission('admin'), async (req, res) => {
+  try {
+    const { regionId } = req.params;
+    
+    // Verify region exists
+    const region = await db.regions.findUnique({ id: regionId });
+    if (!region) {
+      return res.status(404).json({ error: 'Region not found' });
+    }
+    
+    // Find all nodes in this region
+    const nodes = await db.nodes.findMany({
+      where: { regionId }
+    });
+    
+    res.json(nodes);
+  } catch (error) {
+    console.error('Error fetching nodes in region:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Node Routes
 router.get('/', checkPermission('admin'), async (req, res) => {
   try {
