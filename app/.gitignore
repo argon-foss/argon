@@ -1,0 +1,9 @@
+volumes/
+node_modules/
+bun.lockb
+database.sqlite
+krypton.db
+config.yml
+package-lock.json
+.env
+.DS_Store
