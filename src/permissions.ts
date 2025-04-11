@@ -13,11 +13,15 @@ export const Permissions = {
 } as const;
 
 /**
- * Default permission sets for easier assignment
+ * Default permission sets 
  */
 export const PermissionSets = {
-  // Default user permissions - basic server management
   DEFAULT: [
+    Permissions.USER
+  ],
+
+  // Fallback
+  USER: [
     Permissions.USER
   ],
   
@@ -36,22 +40,26 @@ export function hasPermission(userPermissions: string[] | undefined | null, requ
     return false;
   }
 
+  // Convert to lowercase for comparison
+  const lowerCasePermissions = userPermissions.map(p => p.toLowerCase());
+  const lowerCaseRequired = requiredPermission.toLowerCase();
+
   // Admin wildcard check
-  if (userPermissions.includes(Permissions.ADMIN)) {
+  if (lowerCasePermissions.includes(Permissions.ADMIN.toLowerCase())) {
     return true;
   }
 
   // Check each permission
-  return userPermissions.some(permission => {
+  return lowerCasePermissions.some(permission => {
     // Direct match
-    if (permission === requiredPermission) {
+    if (permission === lowerCaseRequired) {
       return true;
     }
 
     // Wildcard match
     if (permission.endsWith('.*')) {
       const prefix = permission.slice(0, -2);
-      return requiredPermission.startsWith(prefix);
+      return lowerCaseRequired.startsWith(prefix);
     }
 
     return false;
