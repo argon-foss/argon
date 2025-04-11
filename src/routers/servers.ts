@@ -807,7 +807,7 @@ router.delete('/:id', checkPermission(Permissions.ADMIN), async (req: any, res) 
 });
 
 // USER ROUTES
-router.get('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
+router.get('/', checkPermission(Permissions.USER), async (req: any, res) => {
   try {
     const isAdmin = hasPermission(req.user.permissions, Permissions.ADMIN);
     const where = isAdmin ? undefined : { userId: req.user.id };
