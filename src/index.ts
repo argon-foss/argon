@@ -105,7 +105,7 @@ if (frontendExists && indexExists) {
           <p>API routes are still available at <span class="api-path">/api/*</span></p>
           <p>For more information, please refer to the <a href="https://docs.argon.software">Argon documentation</a>.</p>
           <p>If you need help, please join our <a href="https://discord.gg/qckQBHG8e3">Discord server</a>.</p>
-          <p><i>Argon 0.8.x (Wraith)</i></p>
+          <p><i>Argon 0.8.x (Matisse)</i></p>
         </body>
       </html>
     `);
@@ -120,7 +120,7 @@ app.listen(PORT, () => {
   console.log(chalk.hex(themeColors.neutral)('╭' + '─'.repeat(boxWidth - 2) + '╮'));
   
   console.log(chalk.hex(themeColors.neutral)('│') + 
-              chalk.white(` Argon 0.8.0 (Wraith) `.padEnd(boxWidth - 2)) + 
+              chalk.white(` Argon 0.8.0 (Matisse) `.padEnd(boxWidth - 2)) + 
               chalk.hex(themeColors.neutral)('│'));
               
   console.log(chalk.hex(themeColors.neutral)('│') + ' '.repeat(boxWidth - 2) + chalk.hex(themeColors.neutral)('│'));
