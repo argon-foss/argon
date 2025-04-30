@@ -230,12 +230,6 @@ const ServerMoveDialog: React.FC<ServerMoveDialogProps> = ({
   );
 };
 
-// Custom tabs component with smooth sliding indicator
-const SmoothTabs = () => {
-  // This will be implemented inline in the Home component
-  return null;
-};
-
 export default function Home() {
   const { currentProject, projects, moveServerToProject } = useProjects();
   const [servers, setServers] = useState<Server[]>([]);
