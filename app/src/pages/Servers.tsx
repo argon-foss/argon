@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRightIcon, FolderIcon, XIcon, AlertTriangleIcon, CheckIcon } from 'lucide-react';
 import { CubeTransparentIcon } from '@heroicons/react/24/solid';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useProjects } from '../contexts/ProjectContext';
 
@@ -230,6 +230,12 @@ const ServerMoveDialog: React.FC<ServerMoveDialogProps> = ({
   );
 };
 
+// Custom tabs component with smooth sliding indicator
+const SmoothTabs = () => {
+  // This will be implemented inline in the Home component
+  return null;
+};
+
 export default function Home() {
   const { currentProject, projects, moveServerToProject } = useProjects();
   const [servers, setServers] = useState<Server[]>([]);
@@ -242,6 +248,112 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // State for tab indicator animation
+  const [indicatorStyle, setIndicatorStyle] = useState({
+    width: 0,
+    height: 0,
+    top: 0,
+    left: 0,
+    opacity: 0,
+  });
+  
+  // Refs for tab buttons
+  const tabRefsMap = useRef<Record<string, HTMLButtonElement | null>>({});
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Set ref for tab button
+  const setTabRef = useCallback((id: string, element: HTMLButtonElement | null) => {
+    tabRefsMap.current[id] = element;
+  }, []);
+  
+  // Update indicator position when active tab changes
+  useEffect(() => {
+    const updateIndicator = () => {
+      const tabElement = tabRefsMap.current[activeTab];
+      if (!tabElement || !tabsContainerRef.current) return;
+      
+      const rect = tabElement.getBoundingClientRect();
+      const containerRect = tabsContainerRef.current.getBoundingClientRect();
+      
+      const offsetLeft = rect.left - containerRect.left;
+      
+      setIndicatorStyle({
+        width: rect.width,
+        height: rect.height,
+        top: 3.5, // Further adjusted for perfect alignment
+        left: offsetLeft,
+        opacity: 1,
+      });
+    };
+    
+    // Use requestAnimationFrame for smooth animation
+    const animationFrame = requestAnimationFrame(updateIndicator);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [activeTab]);
+  
+  // Initialize the indicator position after component mounts
+  useEffect(() => {
+    // Set a small delay to ensure DOM is fully rendered
+    const timer = setTimeout(() => {
+      const tabElement = tabRefsMap.current[activeTab];
+      if (!tabElement || !tabsContainerRef.current) return;
+      
+      const rect = tabElement.getBoundingClientRect();
+      const containerRect = tabsContainerRef.current.getBoundingClientRect();
+      
+      const offsetLeft = rect.left - containerRect.left;
+      
+      setIndicatorStyle({
+        width: rect.width,
+        height: rect.height,
+        top: 3.5, // Further adjusted for perfect alignment
+        left: offsetLeft,
+        opacity: 1,
+      });
+    }, 50);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // TabButton component with ref handling
+  const TabButton = useCallback(({ 
+    id, 
+    isActive, 
+    onClick, 
+    children 
+  }: { 
+    id: string;
+    isActive: boolean;
+    onClick: () => void;
+    children: React.ReactNode;
+  }) => {
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    
+    useEffect(() => {
+      if (buttonRef.current) {
+        setTabRef(id, buttonRef.current);
+      }
+      
+      return () => {
+        setTabRef(id, null);
+      };
+    }, [id]);
+    
+    return (
+      <button
+        ref={buttonRef}
+        onClick={onClick}
+        className={`tab-button relative z-10 px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 outline-none focus:outline-none focus:ring-0 ${
+          isActive
+            ? 'text-gray-800 border-none'
+            : 'text-gray-500 border-none hover:text-gray-700 hover:bg-gray-50'
+        }`}
+      >
+        {children}
+      </button>
+    );
+  }, [setTabRef]);
   
   useEffect(() => {
     fetchServers();
@@ -365,31 +477,43 @@ export default function Home() {
           />
         )}
 
-        {/* Tabs */}
+        {/* Tabs with smooth animation */}
         <div className="mb-4">
-  <div className="inline-flex p-1 space-x-1 bg-gray-100 rounded-lg">
-    <button
-      onClick={() => setActiveTab('servers')}
-      className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
-        activeTab === 'servers'
-          ? 'bg-white text-gray-800 border border-gray-200/50 shadow-xs'
-          : 'text-gray-500 border border-transparent hover:text-gray-700 hover:bg-gray-50'
-      }`}
-    >
-      All servers <span className='text-gray-500 ml-0.5'>{stats.total}</span>
-    </button>
-    <button
-      onClick={() => setActiveTab('overview')}
-      className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
-        activeTab === 'overview'
-          ? 'bg-white text-gray-800 border border-gray-200/50  shadow-xs'
-          : 'text-gray-500 border border-transparent hover:text-gray-700 hover:bg-gray-50'
-      }`}
-    >
-      Overview
-    </button>
-  </div>
-</div>
+          <div 
+            ref={tabsContainerRef} 
+            className="inline-flex p-1 space-x-1 bg-gray-100 rounded-lg relative"
+          >
+            {/* Animated indicator */}
+            <div 
+              className="absolute transform transition-all duration-200 ease-spring bg-white rounded-md shadow-xs border border-gray-200/50 z-0"
+              style={{
+                width: `${indicatorStyle.width}px`,
+                height: `${indicatorStyle.height}px`, // Further reduced height for perfect vertical centering
+                top: `${indicatorStyle.top}px`,
+                left: `${indicatorStyle.left}px`,
+                opacity: indicatorStyle.opacity,
+                transitionDelay: '30ms',
+              }}
+            />
+            
+            {/* Tab buttons */}
+            <TabButton
+              id="servers"
+              isActive={activeTab === 'servers'}
+              onClick={() => setActiveTab('servers')}
+            >
+              All servers <span className='text-gray-500 ml-0.5'>{stats.total}</span>
+            </TabButton>
+            
+            <TabButton
+              id="overview"
+              isActive={activeTab === 'overview'}
+              onClick={() => setActiveTab('overview')}
+            >
+              Overview
+            </TabButton>
+          </div>
+        </div>
 
         {/* Content based on active tab */}
         {activeTab === 'servers' && (
@@ -534,6 +658,24 @@ export default function Home() {
         isSubmitting={isSubmitting}
         error={moveError}
       />
+      
+      {/* CSS for animations - add to your global CSS or style component */}
+      <style>{`
+        /* Custom optimized spring easing function - faster with subtle bounce */
+        .ease-spring { 
+          transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1.2); 
+        }
+        
+        /* Remove white flash on active/focus for tab buttons */
+        .tab-button:focus-visible {
+          outline: none;
+          border-color: transparent;
+        }
+        
+        .tab-button {
+          -webkit-tap-highlight-color: transparent;
+        }
+      `}</style>
     </div>
   );
 }

@@ -77,3 +77,18 @@
 .font-bold {
     font-weight: 700; /* Using bold weight */
 }
+
+  /* Custom optimized spring easing function - faster with subtle bounce */
+  .ease-spring { 
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1.2); 
+  }
+  
+  /* Remove white flash on active/focus for tab buttons */
+  .tab-button:focus-visible {
+    outline: none;
+    border-color: transparent;
+  }
+  
+  .tab-button {
+    -webkit-tap-highlight-color: transparent;
+  }

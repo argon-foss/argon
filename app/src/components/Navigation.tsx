@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   ServerIcon,
   Cog6ToothIcon,
@@ -221,9 +221,75 @@ function Sidebar() {
   // @ts-ignore
   const hasAdminPermission = user?.permissions?.includes('admin') || false;
 
+  // Used for the navigation animation logic
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [previousTabId, setPreviousTabId] = useState<string | null>(null);
+  const [indicatorStyle, setIndicatorStyle] = useState({
+    width: 0,
+    height: 0,
+    top: 0,
+    left: 0,
+    opacity: 0,
+  });
+  console.log(previousTabId)
+  // Use useRef instead of useState to avoid re-renders causing infinite loops
+  const tabRefsMap = useRef<Record<string, HTMLAnchorElement | null>>({});
+  
+  // Effect to track active tab changes
+  useEffect(() => {
+    // Generate ID from pathname
+    const generateTabId = (path: string) => {
+      return path.replace(/\//g, '-').slice(1);
+    };
+
+    const newTabId = generateTabId(location.pathname);
+    
+    if (activeTabId !== newTabId) {
+      setPreviousTabId(activeTabId);
+      setActiveTabId(newTabId);
+    }
+  }, [location.pathname, activeTabId]);
+
+  // Effect to update the indicator position whenever activeTabId changes
+  useEffect(() => {
+    // Using requestAnimationFrame for smoother animation
+    const animationFrame = requestAnimationFrame(() => {
+      if (activeTabId && tabRefsMap.current[activeTabId]) {
+        const tabElement = tabRefsMap.current[activeTabId];
+        if (!tabElement) return;
+
+        // Get the tab's position and dimensions
+        const rect = tabElement.getBoundingClientRect();
+        const navElement = tabElement.closest('nav');
+        const navRect = navElement?.getBoundingClientRect();
+        
+        if (navRect) {
+          // Calculate position relative to the nav container
+          const offsetTop = rect.top - navRect.top;
+          const offsetLeft = rect.left - navRect.left;
+
+          setIndicatorStyle({
+            width: rect.width,
+            height: rect.height,
+            top: offsetTop,
+            left: offsetLeft,
+            opacity: 1,
+          });
+        }
+      }
+    });
+    
+    return () => cancelAnimationFrame(animationFrame);
+  }, [activeTabId]);
+
+  // Create a ref callback function for each NavItem
+  const setTabRef = useCallback((id: string, element: HTMLAnchorElement | null) => {
+    tabRefsMap.current[id] = element;
+  }, []);
+
   return (
     <div 
-      className={`fixed inset-y-0 left-0 w-56 bg-[#101219] p-1 z-10 flex flex-col transform transition-transform duration-300 ease-in-out ${
+      className={`sidebar-container fixed inset-y-0 left-0 w-56 bg-[#101219] p-1 z-10 flex flex-col transform transition-transform duration-300 ease-in-out ${
         sidebarVisible ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
@@ -234,12 +300,27 @@ function Sidebar() {
       
       {/* Main Navigation */}
       <div className="flex-1 p-0.5 overflow-y-auto">
-        <nav className="p-1 mt-2 pr-3 space-y-0.5">
+        <nav className="p-1 mt-2 pr-3 space-y-0.5 relative">
+          {/* Animated background indicator */}
+          <div 
+            className="absolute transform transition-all duration-200 ease-spring bg-[#383c47] rounded-md z-0"
+            style={{
+              width: `${indicatorStyle.width}px`,
+              height: `${indicatorStyle.height}px`,
+              top: `${indicatorStyle.top}px`,
+              left: `${indicatorStyle.left}px`,
+              opacity: indicatorStyle.opacity,
+              // Add a small delay to the background indicator to avoid flash
+              transitionDelay: '30ms',
+            }}
+          />
+
           <NavItem 
             to="/servers" 
             icon={ServerStackIcon} 
             label="Servers" 
             isActive={location.pathname === '/servers'} 
+            setRef={setTabRef}
           />
           
           <NavItem 
@@ -247,6 +328,7 @@ function Sidebar() {
             icon={FolderIcon} 
             label="Projects" 
             isActive={location.pathname === '/projects'} 
+            setRef={setTabRef}
           />
           
           {/* Admin Section - Only show if user has admin permissions */}
@@ -258,63 +340,72 @@ function Sidebar() {
                 to="/admin" 
                 icon={HomeModernIcon} 
                 label="Overview" 
-                isActive={location.pathname === '/admin'} 
+                isActive={location.pathname === '/admin'}
+                setRef={setTabRef}
               />
 
               <NavItem 
                 to="/admin/settings" 
                 icon={Cog6ToothIcon} 
                 label="Settings" 
-                isActive={location.pathname === '/admin/settings'} 
+                isActive={location.pathname === '/admin/settings'}
+                setRef={setTabRef}
               />
 
               <NavItem 
                 to="/admin/api-keys" 
                 icon={KeyIcon} 
                 label="API Keys" 
-                isActive={location.pathname === '/admin/api-keys'} 
+                isActive={location.pathname === '/admin/api-keys'}
+                setRef={setTabRef}
               />
               
               <NavItem 
                 to="/admin/servers" 
                 icon={ServerIcon} 
                 label="Servers" 
-                isActive={location.pathname === '/admin/servers'} 
+                isActive={location.pathname === '/admin/servers'}
+                setRef={setTabRef}
               />
 
               <NavItem 
                 to="/admin/regions" 
                 icon={GlobeAmericasIcon} 
                 label="Regions" 
-                isActive={location.pathname === '/admin/regions'} 
+                isActive={location.pathname === '/admin/regions'}
+                setRef={setTabRef}
               />
               
               <NavItem 
                 to="/admin/nodes" 
                 icon={CubeIcon} 
                 label="Nodes" 
-                isActive={location.pathname === '/admin/nodes'} 
+                isActive={location.pathname === '/admin/nodes'}
+                setRef={setTabRef}
               />
               
               <NavItem 
                 to="/admin/users" 
                 icon={UsersIcon} 
                 label="Users" 
-                isActive={location.pathname === '/admin/users'} 
+                isActive={location.pathname === '/admin/users'}
+                setRef={setTabRef}
               />
 
               <NavItem 
                 to="/admin/units" 
                 icon={ArchiveBoxIcon} 
                 label="Units" 
-                isActive={location.pathname === '/admin/units'} 
+                isActive={location.pathname === '/admin/units'}
+                setRef={setTabRef}
               />
 
               <NavItem 
                 to="/admin/cargo" 
                 icon={ArrowsPointingOutIcon} 
                 label="Cargo" 
-                isActive={location.pathname === '/admin/cargo'} 
+                isActive={location.pathname === '/admin/cargo'}
+                setRef={setTabRef}
               />
             </>
           )}
@@ -328,14 +419,16 @@ function Sidebar() {
                 to={`/servers/${serverId}/console`} 
                 icon={CommandLineIcon} 
                 label="Console" 
-                isActive={location.pathname.endsWith('/console')} 
+                isActive={location.pathname.endsWith('/console')}
+                setRef={setTabRef}
               />
               
               <NavItem 
                 to={`/servers/${serverId}/files`} 
                 icon={FolderIcon} 
                 label="Files" 
-                isActive={location.pathname.endsWith('/files')} 
+                isActive={location.pathname.endsWith('/files')}
+                setRef={setTabRef}
               />
             </>
           )}
@@ -358,25 +451,49 @@ function Sidebar() {
   );
 }
 
-// Navigation Item component for consistent styling
+// Custom spring easing function for index.css
+// Add this to your global CSS:
+// .ease-spring { transition-timing-function: cubic-bezier(0.5, 0, 0.2, 1.4); }
+
+// Enhanced Navigation Item component with ref forwarding
 const NavItem = ({ 
   to, 
   icon: Icon, 
   label, 
-  isActive 
+  isActive,
+  setRef
 }: { 
   to: string; 
   icon: React.ElementType; 
   label: string; 
   isActive: boolean;
+  setRef: (id: string, element: HTMLAnchorElement | null) => void;
 }) => {
+  // Generate a consistent ID from the path
+  const id = to.replace(/\//g, '-').slice(1);
+  
+  // Use useRef to maintain stability
+  const linkRef = useRef<HTMLAnchorElement>(null);
+  
+  // Register the ref on mount only
+  useEffect(() => {
+    if (linkRef.current) {
+      setRef(id, linkRef.current);
+    }
+    
+    return () => {
+      setRef(id, null);
+    };
+  }, [id, setRef]);
+  
   return (
     <Link
       to={to}
-      className={`flex items-center h-8 ml-2 text-xs rounded-md font-light transition duration-200 ${
+      ref={linkRef}
+      className={`nav-link flex items-center h-8 ml-2 text-xs rounded-md font-light transition duration-300 relative z-10 outline-none focus:outline-none focus:ring-0 ${
         isActive
-          ? 'shadow-xs px-2 font-semibold bg-[#383c47] border border-transparent text-white'
-          : 'border border-transparent shadow-transparent px-2 hover:text-white text-white/50'
+          ? 'px-2 font-semibold text-white'
+          : 'border-none px-2 hover:text-white text-white/50'
       }`}
     >
       <Icon strokeWidth="2" className={`mr-2 h-4 w-4 ${isActive ? 'text-white/60' : 'text-white/30'}`} />
