@@ -158,7 +158,7 @@ function Navbar() {
           <div className="relative">
             <div 
               ref={buttonRef}
-              className="flex items-center cursor-pointer mr-4 p-2 rounded-full hover:bg-gray-200/50 py-1.5 active:scale-95 transition duration-200 ease-in-out"
+              className="flex items-center cursor-pointer mr-4 p-2 rounded-lg hover:bg-gray-200/50 py-1.5 active:scale-95 transition duration-200 ease-in-out"
               onClick={toggleDropdown}
             >
               <UserAvatar username={user.username || 'User'} />
@@ -174,7 +174,7 @@ function Navbar() {
                   : 'opacity-0 scale-y-95 translate-y-1 pointer-events-none'
               }`}
             >
-              <div className="p-2">
+              <div className="p-0.5">
                 <button 
                   className="w-full px-4 py-2 text-sm transition active:scale-95 rounded-lg text-gray-700 hover:bg-gray-100 flex items-center"
                 >
@@ -186,13 +186,13 @@ function Navbar() {
                   Profile
                   </Link>
                 </button>
-                <button 
+                <a
                   onClick={handleLogout}
                   className="w-full px-4 py-2 text-sm cursor-pointer active:scale-95 transition rounded-lg text-gray-700 hover:bg-gray-100 flex items-center"
                 >
                   <ArrowLeftOnRectangleIcon className="mr-2 h-4 w-4" />
                   Sign out
-                </button>
+                </a>
               </div>
             </div>
           </div>

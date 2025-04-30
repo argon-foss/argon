@@ -45,6 +45,30 @@ const ServerFiles = lazy(() => import('./pages/[server]/Files'))
 
 */}
 
+// Page transition variants with shadcn-inspired subtle animations
+const pageTransitionVariants = {
+  initial: { 
+    opacity: 0,
+    y: 10
+  },
+  animate: { 
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.15,
+      ease: [0.16, 1, 0.3, 1], // Custom ease curve for subtle, professional feel
+    }
+  },
+  exit: { 
+    opacity: 0,
+    y: -10,
+    transition: {
+      duration: 0.1,
+      ease: [0.16, 1, 0.3, 1],
+    }
+  },
+};
+
 function App() {
   const location = useLocation();
   usePageTitle();
@@ -52,116 +76,99 @@ function App() {
   const noSidebarRoutes = ['/login', '/register', '/404'];
   const shouldHaveSidebar = !noSidebarRoutes.includes(location.pathname);
 
-  const pageVariants = {
-    initial: {
-      opacity: 0,
-      scale: 0.98
-    },
-    animate: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 260,
-        damping: 20
-      }
-    },
-    exit: {
-      opacity: 0,
-      scale: 0.96,
-      transition: {
-        duration: 0.2
-      }
-    }
-  };
-
   return (
     <AuthProvider>
       <SystemProvider>
         <ProjectProvider>
-        <SidebarProvider>
-          <div className="bg-[#f9fafb]">
-            {shouldHaveSidebar && (
-              <>
-                <Sidebar />
-                <Navbar />
-              </>
-            )}
-            <div className={`
-              ${shouldHaveSidebar ? 'pl-56 pt-14 m-4' : ''} 
-              min-h-screen transition-all duration-200 ease-in-out
-            `}>
-              <Suspense fallback={<LoadingSpinner />}>
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={location.pathname}
-                    variants={pageVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    className="h-full"
-                  >
-                    <Routes location={location}>
-                      <Route path="/login" element={<AuthPage />} />
-                      <Route
-                        path="/servers"
-                        element={
-                          <ProtectedRoute>
-                            <Servers />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/projects"
-                        element={
-                          <ProtectedRoute>
-                            <Projects />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/admin"
-                        element={
-                          <ProtectedRoute>
-                            <AdminPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route path="/" element={<Navigate to="/servers" />} />
-                      <Route path="/profile" element={<Profile />} />
-                      <Route path="*" element={<NotFound />} />
+          <SidebarProvider>
+            <div className="bg-[#f9fafb]">
+              {shouldHaveSidebar && (
+                <>
+                  <Sidebar />
+                  <Navbar />
+                </>
+              )}
+              <main 
+                className={`
+                  ${shouldHaveSidebar ? 'pl-56 pt-14 m-4' : ''} 
+                  min-h-screen transition-all duration-200 ease-in-out relative
+                `}
+              >
+                <Suspense fallback={
+                  <div className="flex items-center justify-center h-full min-h-[50vh]">
+                    <LoadingSpinner />
+                  </div>
+                }>
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                      key={location.pathname}
+                      variants={pageTransitionVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      className="h-full w-full"
+                    >
+                      <Routes location={location}>
+                        <Route path="/login" element={<AuthPage />} />
+                        <Route
+                          path="/servers"
+                          element={
+                            <ProtectedRoute>
+                              <Servers />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/projects"
+                          element={
+                            <ProtectedRoute>
+                              <Projects />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin"
+                          element={
+                            <ProtectedRoute>
+                              <AdminPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route path="/" element={<Navigate to="/servers" />} />
+                        <Route path="/profile" element={<Profile />} />
+                        <Route path="*" element={<NotFound />} />
 
-                      <Route path="/admin/nodes" element={<AdminNodes />} />
-                      <Route path="/admin/servers" element={<AdminServers />} />
-                      <Route path="/admin/units" element={<AdminUnits />} />
-                      <Route path="/admin/users" element={<AdminUsers />} />
-                      <Route path="/admin/cargo" element={<AdminCargo />} />
-                      <Route path="/admin/regions" element={<AdminRegions />} />
+                        <Route path="/admin/nodes" element={<AdminNodes />} />
+                        <Route path="/admin/servers" element={<AdminServers />} />
+                        <Route path="/admin/units" element={<AdminUnits />} />
+                        <Route path="/admin/users" element={<AdminUsers />} />
+                        <Route path="/admin/cargo" element={<AdminCargo />} />
+                        <Route path="/admin/regions" element={<AdminRegions />} />
 
-                      {/* Server routes */}
-                      <Route
-                        path="/servers/:id/console"
-                        element={
-                          <ProtectedRoute>
-                            <ServerConsole />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/servers/:id/files"
-                        element={
-                          <ProtectedRoute>
-                            <ServerFiles />
-                          </ProtectedRoute>
-                        }
-                      />
-                    </Routes>
-                  </motion.div>
-                </AnimatePresence>
-              </Suspense>
+                        {/* Server routes */}
+                        <Route
+                          path="/servers/:id/console"
+                          element={
+                            <ProtectedRoute>
+                              <ServerConsole />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/servers/:id/files"
+                          element={
+                            <ProtectedRoute>
+                              <ServerFiles />
+                            </ProtectedRoute>
+                          }
+                        />
+                      </Routes>
+                    </motion.div>
+                  </AnimatePresence>
+                </Suspense>
+              </main>
             </div>
-          </div>
-        </SidebarProvider>
+          </SidebarProvider>
         </ProjectProvider>
       </SystemProvider>
     </AuthProvider>

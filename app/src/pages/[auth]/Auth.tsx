@@ -138,9 +138,9 @@ export const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-r from-teal-100 to-indigo-200">
+    <div className="min-h-screen flex bg-gray-50">
       {/* Left panel */}
-      <div className="w-2/5 bg-[#181b24] p-10 flex flex-col justify-center">
+      <div className="w-2/5 bg-[#101219] p-10 flex flex-col justify-center">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-white">Argon</h1>
         </div>
@@ -169,7 +169,7 @@ export const AuthPage: React.FC = () => {
       
       {/* Right panel */}
       <div className="w-3/5 flex items-center justify-center">
-        <div className="bg-gradient-to-b from-white/80 to-white rounded-xl shadow-sm p-8 w-full max-w-md border border-gray-200">
+        <div className="bg-white rounded-lg shadow-xs p-8 w-full max-w-md border border-gray-200/50">
           <h2 className="text-2xl font-semibold text-gray-800 mb-1">
             Sign in
           </h2>
