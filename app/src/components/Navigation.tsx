@@ -373,13 +373,13 @@ const NavItem = ({
   return (
     <Link
       to={to}
-      className={`flex items-center h-8 ml-2 text-sm rounded-md font-thin transition duration-200 ${
+      className={`flex items-center h-8 ml-2 text-xs rounded-md font-light transition duration-200 ${
         isActive
-          ? 'shadow-sm px-2 font-medium bg-[#383c47] border border-transparent text-white'
+          ? 'shadow-xs px-2 font-semibold bg-[#383c47] border border-transparent text-white'
           : 'border border-transparent shadow-transparent px-2 hover:text-white text-white/50'
       }`}
     >
-      <Icon strokeWidth="2" className={`mr-2 h-4 w-4 ${isActive ? 'text-white/80' : 'text-white/30'}`} />
+      <Icon strokeWidth="2" className={`mr-2 h-4 w-4 ${isActive ? 'text-white/60' : 'text-white/30'}`} />
       <span className={`${['nodes', 'servers', 'projects', 'api keys'].includes(label.toLowerCase()) ? 'mt-[1.75px]' : ''}`}>{label}</span>
     </Link>
   );

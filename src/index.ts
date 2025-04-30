@@ -1,7 +1,15 @@
 /*
- * Argon version v1.0.0-dev (Revenant)
- * (c) 2017 - 2025 ether
- */
+                              
+   ____ __________ _____  ____ 
+  / __ `/ ___/ __ `/ __ \/ __ \
+ / /_/ / /  / /_/ / /_/ / / / /
+ \__,_/_/   \__, /\____/_/ /_/ 
+           /____/              
+          
+ Argon 0.8.0 (Matisse)
+ © 2025 Argon Foundation (https://argon.software) - All rights reserved
+
+*/
 
 import express from 'express';
 import { join, resolve } from 'path';
@@ -28,11 +36,9 @@ const themeColors = {
 
 app.use(express.json());
 
-// API routes
 const routersDir = join(__dirname, 'src', 'routers');
 app.use(loadRouters(routersDir));
 
-// System API route
 app.get('/api/system', (req, res) => {
   res.json({
     name: process.env.PANEL_NAME || 'Argon',
@@ -41,16 +47,13 @@ app.get('/api/system', (req, res) => {
   });
 });
 
-// Create a gradient for the ASCII art
 const asciiPath = join(__dirname, '/', '_ascii.txt');
 if (existsSync(asciiPath)) {
   const ascii = require('fs').readFileSync(asciiPath, 'utf-8');
-  
-  // Create a gradient from themeColors.primary to themeColors.secondary
   const asciiGradient = gradient('FFFFFF', themeColors.text);
   console.log(asciiGradient(ascii));
   
-  console.log(); // Add a blank line for better spacing
+  console.log();
 } else {
   console.log(chalk.hex(themeColors.error)('┌─────────────────────────────────────────┐'));
   console.log(chalk.hex(themeColors.error)('│ ASCII art not found at ' + asciiPath.padEnd(34) + '│'));
@@ -58,21 +61,14 @@ if (existsSync(asciiPath)) {
   console.log(chalk.hex(themeColors.error)('└─────────────────────────────────────────┘'));
 }
 
-// Validate and serve frontend
 const frontendPath = resolve(__dirname, './app/dist');
 const indexPath = join(frontendPath, 'index.html');
 
-// Check if frontend exists and has the required structure
 const frontendExists = existsSync(frontendPath) && statSync(frontendPath).isDirectory();
 const indexExists = existsSync(indexPath) && statSync(indexPath).isFile();
 
 if (frontendExists && indexExists) {
-  console.log(chalk.hex(themeColors.success)('✓ Frontend build detected and ready to serve'));
-  
-  // Serve static assets
   app.use(express.static(frontendPath));
-  
-  // Serve index.html for client-side routing
   app.get('*', (req, res) => {
     if (req.path.startsWith('/api')) return;
     res.sendFile(indexPath);
@@ -81,7 +77,6 @@ if (frontendExists && indexExists) {
   console.log(chalk.hex(themeColors.warn)('⚠ Frontend build not detected at ' + frontendPath));
   console.log(chalk.hex(themeColors.warn)('  Only API routes will be available'));
   
-  // Fallback for non-API routes when frontend is missing
   app.get('*', (req, res) => {
     if (req.path.startsWith('/api')) return;
     res.status(404).send(`
@@ -110,7 +105,7 @@ if (frontendExists && indexExists) {
           <p>API routes are still available at <span class="api-path">/api/*</span></p>
           <p>For more information, please refer to the <a href="https://docs.argon.software">Argon documentation</a>.</p>
           <p>If you need help, please join our <a href="https://discord.gg/qckQBHG8e3">Discord server</a>.</p>
-          <p><i>Argon 1.0.0-dev (Revenant)</i></p>
+          <p><i>Argon 0.8.x (Wraith)</i></p>
         </body>
       </html>
     `);
@@ -119,17 +114,13 @@ if (frontendExists && indexExists) {
 
 // Start server
 app.listen(PORT, () => {
-  // Create a box for startup message
   const serverUrl = `http://localhost:${PORT}`;
   const boxWidth = Math.max(serverUrl.length + 24, 45);
   
-  // Modern server start display
-  console.log();
   console.log(chalk.hex(themeColors.neutral)('╭' + '─'.repeat(boxWidth - 2) + '╮'));
   
-  // Content with white/gray text for the "server started" message
   console.log(chalk.hex(themeColors.neutral)('│') + 
-              chalk.white(` Argon 1.0.0-dev (Revenant) `.padEnd(boxWidth - 2)) + 
+              chalk.white(` Argon 0.8.0 (Wraith) `.padEnd(boxWidth - 2)) + 
               chalk.hex(themeColors.neutral)('│'));
               
   console.log(chalk.hex(themeColors.neutral)('│') + ' '.repeat(boxWidth - 2) + chalk.hex(themeColors.neutral)('│'));
@@ -142,7 +133,6 @@ app.listen(PORT, () => {
               chalk.hex(themeColors.text)(` API routes available at /api/* `.padEnd(boxWidth - 2)) + 
               chalk.hex(themeColors.neutral)('│'));
   
-  // Bottom border
   console.log(chalk.hex(themeColors.neutral)('╰' + '─'.repeat(boxWidth - 2) + '╯'));
   console.log();
 });

@@ -61,6 +61,10 @@
     font-family: 'Coinbase Mono', monospace !important;
 }
 
+.font-normal {
+    font-weight: 200; /* Using regular weight for medium */
+}
+
 /* Font weight mappings */
 .font-medium {
     font-weight: 400; /* Using regular weight for medium */

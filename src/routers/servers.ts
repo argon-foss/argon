@@ -499,7 +499,7 @@ router.post('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
     const createServerSchema = z.object({
       name: z.string().min(1).max(100),
       nodeId: z.string().uuid().optional(),
-      regionId: z.string().uuid().optional(),
+      regionId: z.string().optional().transform(val => val === "" ? undefined : val),
       allocationId: z.string().uuid().optional(),
       memoryMiB: z.number().int().min(128),
       diskMiB: z.number().int().min(1024),
@@ -507,8 +507,19 @@ router.post('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
       unitId: z.string().uuid(),
       userId: z.string().uuid(),
       projectId: z.string().uuid().optional() 
-    }).refine(data => data.nodeId || data.regionId, {
-      message: "Either nodeId or regionId must be provided"
+    }).refine(data => {
+      // If regionId is present and not empty, it must be a valid UUID
+      if (data.regionId && data.regionId !== "") {
+        try {
+          z.string().uuid().parse(data.regionId);
+        } catch {
+          return false;
+        }
+      }
+      // Either nodeId or valid regionId must be present
+      return !!data.nodeId || (!!data.regionId && data.regionId !== "");
+    }, {
+      message: "Either nodeId or a valid regionId must be provided"
     });
 
     const data = createServerSchema.parse(req.body);
