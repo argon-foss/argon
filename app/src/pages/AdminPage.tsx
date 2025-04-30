@@ -13,10 +13,10 @@ const AdminPage = () => {
           </div>
 
           <div className="bg-white border border-gray-200 rounded-md shadow-xs p-6">
-            <img src="https://i.imgur.com/1jwsFZN.png" alt="Argon Logo" className="w-auto h-16 mb-4" />
-            <h2 className="text-sm font-medium text-gray-900">Argon 1.0.0-dev (Revenant)</h2>
+            <img src="https://i.imgur.com/PFrLPtt.png" alt="Argon Logo" className="w-auto h-8 mt-2 mb-6" />
+            <h2 className="text-sm font-medium text-gray-900">Argon 0.8.0 (Matisse)</h2>
             <p className="text-xs text-gray-500 mt-1">
-              Your panel is up-to-date! The latest version of Argon is 1.0.0-dev (Revenant) under channel "stable" and was released on 2025-01-01.
+              Your panel is up-to-date! The latest version of Argon is 0.8.0 (Matisse) under channel "stable" and was released on 2025-03-05.
             </p>
           </div>
 

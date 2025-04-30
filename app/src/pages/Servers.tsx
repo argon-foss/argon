@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ChevronRightIcon, FolderIcon, XIcon, AlertTriangleIcon, CheckIcon } from 'lucide-react';
+import { CubeTransparentIcon } from '@heroicons/react/24/solid';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect, useRef } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -365,36 +366,30 @@ export default function Home() {
         )}
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 mb-8">
-          <div className="flex">
-            <button
-              onClick={() => setActiveTab('servers')}
-              className={`pb-2 text-md font-medium relative ${
-                activeTab === 'servers'
-                  ? 'text-gray-800 border-indigo-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              All servers <span className='text-gray-500 ml-0.5 mr-0.5'>{stats.total}</span>
-              {activeTab === 'servers' && (
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600"></div>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`pb-2 ml-6 text-md font-medium relative ${
-                activeTab === 'overview'
-                  ? 'text-gray-800 border-indigo-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Overview
-              {activeTab === 'overview' && (
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600"></div>
-              )}
-            </button>
-          </div>
-        </div>
+        <div className="mb-4">
+  <div className="inline-flex p-1 space-x-1 bg-gray-100 rounded-lg">
+    <button
+      onClick={() => setActiveTab('servers')}
+      className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
+        activeTab === 'servers'
+          ? 'bg-white text-gray-800 border border-gray-200/50 shadow-xs'
+          : 'text-gray-500 border border-transparent hover:text-gray-700 hover:bg-gray-50'
+      }`}
+    >
+      All servers <span className='text-gray-500 ml-0.5'>{stats.total}</span>
+    </button>
+    <button
+      onClick={() => setActiveTab('overview')}
+      className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
+        activeTab === 'overview'
+          ? 'bg-white text-gray-800 border border-gray-200/50  shadow-xs'
+          : 'text-gray-500 border border-transparent hover:text-gray-700 hover:bg-gray-50'
+      }`}
+    >
+      Overview
+    </button>
+  </div>
+</div>
 
         {/* Content based on active tab */}
         {activeTab === 'servers' && (
@@ -462,13 +457,9 @@ export default function Home() {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-16 bg-white rounded-lg border border-gray-200">
-                <div className="w-32 h-32 mb-6">
-                  <img 
-                    src="https://static.nebius.com/common/illustrations/compute/empty/light.svg" 
-                    alt="No servers" 
-                    className="w-full h-full"
-                  />
+              <div className="flex flex-col items-center justify-center py-24 bg-white rounded-lg border border-gray-200">
+                <div className="w-16 h-16 bg-gray-100 rounded-xl mb-6">
+                  <CubeTransparentIcon className="w-8 h-8 text-gray-400 mx-auto mt-4.25" />
                 </div>
                 <h2 className="text-xl font-semibold text-gray-800 mb-2">
                   {currentProject?.isDefault
@@ -482,7 +473,7 @@ export default function Home() {
                 </p>
                 <button 
                   onClick={fetchServers}
-                  className="flex items-center justify-center border border-gray-300 rounded-md px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                  className="flex items-center justify-center border border-gray-300/50 rounded-lg px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition duration-150"
                 >
                   <ArrowPathIcon className="h-4 w-4 mr-2" />
                   Refresh server list

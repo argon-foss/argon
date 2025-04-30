@@ -1,301 +1,43 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useProjects } from '../contexts/ProjectContext';
-import { 
-  ChevronDownIcon, 
-  PlusIcon, 
-  PencilIcon, 
-  TrashIcon, 
-  CheckIcon, 
-  XIcon, 
-  AlertTriangleIcon 
-} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { CheckIcon, PlusIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 
-interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  children: React.ReactNode;
-  maxWidth?: string;
+interface ProjectSwitcherProps {
+  showOrganization?: boolean;
 }
 
-const Modal: React.FC<ModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
-  maxWidth = 'max-w-md' 
-}) => {
-  const modalRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-    
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleEscape);
-      // Prevent body scrolling when modal is open
-      document.body.style.overflow = 'hidden';
-    }
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'auto';
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-gray-100 bg-opacity-50 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ease-in-out animate-fade-in">
-      <div 
-        ref={modalRef}
-        className={`bg-white rounded-lg shadow-xs w-full ${maxWidth} transform transition-all duration-200 ease-in-out animate-scale-in`}
-      >
-        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">{title}</h3>
-          <button 
-            onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors duration-150"
-          >
-            <XIcon className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="px-6 py-4">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Alert component for form errors/warnings
-interface AlertProps {
-  type: 'error' | 'success' | 'warning';
-  message: string;
-  onDismiss?: () => void;
-}
-
-const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
-  const bgColor = type === 'error' ? 'bg-red-50' : type === 'success' ? 'bg-green-50' : 'bg-yellow-50';
-  const textColor = type === 'error' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-yellow-600';
-  const borderColor = type === 'error' ? 'border-red-100' : type === 'success' ? 'border-green-100' : 'border-yellow-100';
-  
-  return (
-    <div className={`${bgColor} border ${borderColor} rounded-md flex items-start justify-between mb-4`}>
-      <div className="flex items-start p-3">
-        {type === 'error' || type === 'warning' ? (
-          <AlertTriangleIcon className={`w-4 h-4 ${textColor} mr-2 mt-0.5`} />
-        ) : (
-          <CheckIcon className={`w-4 h-4 ${textColor} mr-2 mt-0.5`} />
-        )}
-        <p className={`text-xs ${textColor}`}>{message}</p>
-      </div>
-      {onDismiss && (
-        <button
-          onClick={onDismiss}
-          className={`p-2 ${textColor} hover:bg-opacity-10 cursor-pointer rounded-full`}
-        >
-          <XIcon className="w-4 h-4" />
-        </button>
-      )}
-    </div>
-  );
-};
-
-// Dialog for creating/editing projects
-interface ProjectDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  initialName: string;
-  initialDescription: string;
-  onSubmit: (name: string, description: string) => void;
-  isSubmitting: boolean;
-  error?: string | null;
-}
-
-const ProjectDialog: React.FC<ProjectDialogProps> = ({
-  isOpen,
-  onClose,
-  title,
-  initialName,
-  initialDescription,
-  onSubmit,
-  isSubmitting,
-  error
-}) => {
-  const [name, setName] = useState(initialName);
-  const [description, setDescription] = useState(initialDescription);
-  const [formError, setFormError] = useState<string | null>(error || null);
-
-  useEffect(() => {
-    setName(initialName);
-    setDescription(initialDescription);
-    setFormError(error ?? null);
-  }, [initialName, initialDescription, error, isOpen]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!name.trim()) {
-      setFormError('Project name is required');
-      return;
-    }
-    
-    onSubmit(name, description);
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title}>
-      {formError && (
-        <Alert 
-          type="error" 
-          message={formError} 
-          onDismiss={() => setFormError(null)} 
-        />
-      )}
-      
-      <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Project Name
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
-            placeholder="My Project"
-            required
-            autoFocus
-          />
-        </div>
-        <div className="mb-6">
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Description (optional)
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
-            placeholder="Brief description of this project"
-            rows={3}
-          />
-        </div>
-        <div className="flex justify-end space-x-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors duration-150"
-            disabled={isSubmitting}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting || !name.trim()}
-            className="px-4 py-2 text-xs font-medium text-white bg-gray-900 border border-transparent rounded-md hover:bg-gray-800 focus:outline-none transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? 'Saving...' : 'Save'}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-};
-
-// Confirmation dialog
-interface ConfirmDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  message: string;
-  confirmText: string;
-  onConfirm: () => void;
-  isSubmitting: boolean;
-  type?: 'danger' | 'warning';
-}
-
-const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
-  isOpen,
-  onClose,
-  title,
-  message,
-  confirmText,
-  onConfirm,
-  isSubmitting,
-  type = 'danger'
-}) => {
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title}>
-      <div className="mb-6">
-        <p className="text-sm text-gray-600">{message}</p>
-      </div>
-      <div className="flex justify-end space-x-3">
-        <button
-          type="button"
-          onClick={onClose}
-          className="px-4 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors duration-150"
-          disabled={isSubmitting}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={isSubmitting}
-          className={`px-4 py-2 text-xs font-medium text-white ${
-            type === 'danger' 
-              ? 'bg-red-600 hover:bg-red-700' 
-              : 'bg-yellow-600 hover:bg-yellow-700'
-          } border border-transparent rounded-md focus:outline-none transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          {isSubmitting ? 'Processing...' : confirmText}
-        </button>
-      </div>
-    </Modal>
-  );
-};
-
-const ProjectSwitcher: React.FC = () => {
+const ProjectSwitcher: React.FC<ProjectSwitcherProps> = ({ showOrganization = true }) => {
   const { 
     projects, 
     currentProject, 
-    switchProject, 
-    createProject, 
-    updateProject, 
-    deleteProject 
+    switchProject,
+    createProject
   } = useProjects();
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [editingProject, setEditingProject] = useState<{ id: string; name: string; description: string }>({
-    id: '',
-    name: '',
-    description: ''
-  });
-  const [deletingProjectId, setDeletingProjectId] = useState<string>('');
+  const [isOrgDropdownOpen, setIsOrgDropdownOpen] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
+  const orgDropdownRef = useRef<HTMLDivElement>(null);
+  const orgButtonRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
+  // Focus input when creating new project
+  useEffect(() => {
+    if (isCreatingProject && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isCreatingProject]);
+
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Project dropdown
       if (
         dropdownRef.current && 
         !dropdownRef.current.contains(event.target as Node) &&
@@ -303,6 +45,18 @@ const ProjectSwitcher: React.FC = () => {
         !buttonRef.current.contains(event.target as Node)
       ) {
         setIsDropdownOpen(false);
+        setIsCreatingProject(false);
+        setNewProjectName('');
+      }
+      
+      // Organization dropdown
+      if (
+        orgDropdownRef.current && 
+        !orgDropdownRef.current.contains(event.target as Node) &&
+        orgButtonRef.current && 
+        !orgButtonRef.current.contains(event.target as Node)
+      ) {
+        setIsOrgDropdownOpen(false);
       }
     };
 
@@ -312,204 +66,165 @@ const ProjectSwitcher: React.FC = () => {
     };
   }, []);
 
-  const handleCreateProject = async (name: string, description: string) => {
-    setFormError(null);
+  const handleCreateProject = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newProjectName.trim() || isSubmitting) return;
+    
     try {
       setIsSubmitting(true);
-      await createProject(name, description);
-      setIsCreateDialogOpen(false);
+      await createProject(newProjectName, '');
+      setNewProjectName('');
+      setIsCreatingProject(false);
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Failed to create project');
+      console.error('Failed to create project:', error);
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleUpdateProject = async (name: string, description: string) => {
-    setFormError(null);
-    try {
-      setIsSubmitting(true);
-      await updateProject(editingProject.id, name, description);
-      setIsEditDialogOpen(false);
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Failed to update project');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteProject = async () => {
-    try {
-      setIsSubmitting(true);
-      await deleteProject(deletingProjectId);
-      setIsDeleteDialogOpen(false);
-    } catch (error) {
-      console.error('Failed to delete project:', error);
-      // We'll keep the dialog open but show an error
-      setFormError(error instanceof Error ? error.message : 'Failed to delete project');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleEditClick = (e: React.MouseEvent, project: any) => {
-    e.stopPropagation();
-    setEditingProject({
-      id: project.id,
-      name: project.name,
-      description: project.description || ''
-    });
-    setFormError(null);
-    setIsEditDialogOpen(true);
-    setIsDropdownOpen(false);
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent, projectId: string) => {
-    e.stopPropagation();
-    setDeletingProjectId(projectId);
-    setFormError(null);
-    setIsDeleteDialogOpen(true);
-    setIsDropdownOpen(false);
   };
 
   return (
-    <>
-      <div className="flex items-center relative">
+    <div className="flex items-center space-x-1">
+      {/* Organization Switcher */}
+      {showOrganization && (
+        <>
+          <div className="relative">
+            <div 
+              ref={orgButtonRef}
+              className="flex items-center space-x-1 px-1 py-1 hover:bg-[#383c47] rounded-md transition cursor-pointer"
+              onClick={() => setIsOrgDropdownOpen(!isOrgDropdownOpen)}
+            >
+              <div className="h-5 w-5 bg-gray-100 rounded-md flex items-center justify-center">
+                <span className="font-semibold text-xs text-gray-800">P</span>
+              </div>
+              <span className="text-xs ml-1 text-gray-300 font-medium">Personal</span>
+              <svg width="7" height="10" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className="text-gray-400 mb-0.5">
+                <path fillRule="evenodd" clipRule="evenodd" d="M4.34151 0.747423C4.71854 0.417526 5.28149 0.417526 5.65852 0.747423L9.65852 4.24742C10.0742 4.61111 10.1163 5.24287 9.75259 5.6585C9.38891 6.07414 8.75715 6.11626 8.34151 5.75258L5.00001 2.82877L1.65852 5.75258C1.24288 6.11626 0.61112 6.07414 0.247438 5.6585C-0.116244 5.24287 -0.0741267 4.61111 0.34151 4.24742L4.34151 0.747423ZM0.246065 10.3578C0.608879 9.94139 1.24055 9.89795 1.65695 10.2608L5.00001 13.1737L8.34308 10.2608C8.75948 9.89795 9.39115 9.94139 9.75396 10.3578C10.1168 10.7742 10.0733 11.4058 9.65695 11.7687L5.65695 15.2539C5.28043 15.582 4.7196 15.582 4.34308 15.2539L0.343082 11.7687C-0.0733128 11.4058 -0.116749 10.7742 0.246065 10.3578Z"></path>
+              </svg>
+            </div>
+
+            {/* Organization Dropdown */}
+            {isOrgDropdownOpen && (
+              <div
+                ref={orgDropdownRef}
+                className="absolute left-0 top-full mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50 py-1 animate-fade-in"
+              >
+                <div 
+                  className="px-2 py-1.5 hover:bg-gray-50 cursor-pointer flex items-center"
+                  onClick={() => setIsOrgDropdownOpen(false)}
+                >
+                  <div className="h-5 w-5 bg-gray-800 rounded-md flex items-center justify-center mr-2">
+                    <span className="font-medium text-xs text-white">P</span>
+                  </div>
+                  <span className="text-sm text-gray-700">Personal</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <span className="text-gray-500">/</span>
+        </>
+      )}
+
+      {/* Project Switcher */}
+      <div className="relative">
         <div 
           ref={buttonRef}
-          className="flex items-center space-x-2 px-4 hover:bg-gray-100 py-2 rounded-r-xl transition cursor-pointer active:scale-95"
+          className="flex items-center space-x-1 px-1 py-1 hover:bg-[#383c47] rounded-md transition cursor-pointer active:scale-95"
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         >
-          <div className="h-8 w-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-            <span className="font-semibold text-indigo-800">
-              {currentProject?.name?.charAt(0).toUpperCase() || 'P'}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs text-gray-500 font-semibold">
-              {currentProject?.name || 'Select a project'}
-            </span>
-            <div className="flex items-center">
-              <span className="text-xs text-gray-400">
-                {currentProject?.serverCount || 0} server{currentProject?.serverCount !== 1 ? 's' : ''}
-              </span>
-            </div>
-          </div>
-          <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+          <span className="text-xs text-gray-300 font-medium">{currentProject?.name || 'Default project'}</span>
+          <svg width="7" height="10" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className="text-gray-400 mb-0.5">
+            <path fillRule="evenodd" clipRule="evenodd" d="M4.34151 0.747423C4.71854 0.417526 5.28149 0.417526 5.65852 0.747423L9.65852 4.24742C10.0742 4.61111 10.1163 5.24287 9.75259 5.6585C9.38891 6.07414 8.75715 6.11626 8.34151 5.75258L5.00001 2.82877L1.65852 5.75258C1.24288 6.11626 0.61112 6.07414 0.247438 5.6585C-0.116244 5.24287 -0.0741267 4.61111 0.34151 4.24742L4.34151 0.747423ZM0.246065 10.3578C0.608879 9.94139 1.24055 9.89795 1.65695 10.2608L5.00001 13.1737L8.34308 10.2608C8.75948 9.89795 9.39115 9.94139 9.75396 10.3578C10.1168 10.7742 10.0733 11.4058 9.65695 11.7687L5.65695 15.2539C5.28043 15.582 4.7196 15.582 4.34308 15.2539L0.343082 11.7687C-0.0733128 11.4058 -0.116749 10.7742 0.246065 10.3578Z"></path>
+          </svg>
         </div>
 
-        {/* Dropdown Menu */}
+        {/* Project Dropdown */}
         {isDropdownOpen && (
           <div
             ref={dropdownRef}
-            className="absolute left-0 top-full mt-1 w-72 bg-white rounded-md shadow-lg border border-gray-200 z-50 animate-slide-down origin-top"
-            style={{ 
-              transformOrigin: 'top', 
-              animation: 'slideDown 0.2s ease-out forwards'
-            }}
+            className="absolute left-0 top-full mt-4 w-64 bg-white rounded-md shadow-lg border border-gray-200 z-50 overflow-hidden animate-fade-in"
           >
-            <div className="p-3 border-b border-gray-100">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Your Projects
+            <div className="px-4 py-2 border-b border-gray-100">
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                PROJECTS
               </h3>
             </div>
-            <div className="max-h-96 overflow-y-auto">
+            
+            <div className="max-h-64 overflow-y-auto">
               {projects.map((project) => (
                 <div
                   key={project.id}
-                  className={`px-4 py-3 flex items-center justify-between hover:bg-gray-50 cursor-pointer ${
-                    currentProject?.id === project.id ? 'bg-indigo-50' : ''
+                  className={`px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center justify-between ${
+                    currentProject?.id === project.id ? 'bg-gray-50' : ''
                   }`}
                   onClick={() => {
                     switchProject(project.id);
                     setIsDropdownOpen(false);
                   }}
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className="h-8 w-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                      <span className="font-semibold text-indigo-800">
-                        {project.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{project.name}</div>
-                      <div className="text-xs text-gray-500">
-                        {project.serverCount} server{project.serverCount !== 1 ? 's' : ''}
-                      </div>
-                    </div>
+                  <div className="flex items-center">
+                    <span className="text-sm text-gray-700">
+                      {project.name}
+                    </span>
                   </div>
-                  {!project.isDefault && (
-                    <div className="flex space-x-1">
-                      <button
-                        onClick={(e) => handleEditClick(e, project)}
-                        className="p-1 text-gray-400 hover:text-gray-800 rounded-full hover:bg-gray-100 transition-colors duration-150"
-                        title="Edit project"
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={(e) => handleDeleteClick(e, project.id)}
-                        className="p-1 text-gray-400 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors duration-150"
-                        title="Delete project"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    </div>
+                  {currentProject?.id === project.id && (
+                    <CheckIcon className="h-4 w-4 text-gray-600" />
                   )}
                 </div>
               ))}
             </div>
-            <div 
-              className="p-3 border-t border-gray-100 flex items-center space-x-2 text-indigo-600 hover:bg-gray-50 cursor-pointer transition-colors duration-150"
-              onClick={() => {
-                setIsCreateDialogOpen(true);
-                setIsDropdownOpen(false);
-                setFormError(null);
-              }}
-            >
-              <PlusIcon className="h-4 w-4" />
-              <span className="text-sm font-medium">Create new project</span>
+            
+            <div className="border-t border-gray-100">
+              {isCreatingProject ? (
+                <form 
+                  className="px-4 py-2 flex items-center"
+                  onSubmit={handleCreateProject}
+                >
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    placeholder="Project name..."
+                    className="w-full text-sm border-b border-gray-200 focus:border-gray-500 px-0 py-1 focus:outline-none"
+                    disabled={isSubmitting}
+                  />
+                </form>
+              ) : (
+                <div 
+                  className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center text-gray-700"
+                  onClick={() => setIsCreatingProject(true)}
+                >
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  <span className="text-sm">Create project</span>
+                </div>
+              )}
+              
+              <Link 
+                to="/projects"
+                className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center text-gray-700"
+                onClick={() => setIsDropdownOpen(false)}
+              >
+                <Cog6ToothIcon className="h-4 w-4 mr-2" />
+                <span className="text-sm">Manage projects</span>
+              </Link>
             </div>
           </div>
         )}
       </div>
 
-      {/* Create Project Dialog */}
-      <ProjectDialog
-        isOpen={isCreateDialogOpen}
-        onClose={() => setIsCreateDialogOpen(false)}
-        title="Create New Project"
-        initialName=""
-        initialDescription=""
-        onSubmit={handleCreateProject}
-        isSubmitting={isSubmitting}
-        error={formError}
-      />
-
-      {/* Edit Project Dialog */}
-      <ProjectDialog
-        isOpen={isEditDialogOpen}
-        onClose={() => setIsEditDialogOpen(false)}
-        title="Edit Project"
-        initialName={editingProject.name}
-        initialDescription={editingProject.description}
-        onSubmit={handleUpdateProject}
-        isSubmitting={isSubmitting}
-        error={formError}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        title="Delete Project"
-        message="Are you sure you want to delete this project? All servers will be moved to the Default project."
-        confirmText="Delete Project"
-        onConfirm={handleDeleteProject}
-        isSubmitting={isSubmitting}
-        type="danger"
-      />
-    </>
+      {/* Add global CSS animations */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-5px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+          animation: fadeIn 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
+    </div>
   );
 };
 

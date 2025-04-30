@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Suspense, lazy } from 'react';
-import { Sidebar, Navbar } from './components/Navigation';
+import { Sidebar, SidebarProvider, Navbar } from './components/Navigation';
 import LoadingSpinner from './components/LoadingSpinner';
 import { AuthProvider, ProtectedRoute, AuthPage } from './pages/[auth]/Auth';
 import { SystemProvider } from './contexts/SystemContext';
@@ -10,6 +10,7 @@ import { usePageTitle } from './hooks/usePageTitle';
 
 const Servers = lazy(() => import('./pages/Servers'));
 const Projects = lazy(() => import('./pages/Projects'));
+const Profile = lazy(() => import('./pages/Profile'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 
@@ -78,7 +79,8 @@ function App() {
     <AuthProvider>
       <SystemProvider>
         <ProjectProvider>
-          <div className="bg-gray-100">
+        <SidebarProvider>
+          <div className="bg-[#f9fafb]">
             {shouldHaveSidebar && (
               <>
                 <Sidebar />
@@ -86,7 +88,7 @@ function App() {
               </>
             )}
             <div className={`
-              ${shouldHaveSidebar ? 'pl-56 pt-14' : ''} 
+              ${shouldHaveSidebar ? 'pl-56 pt-14 m-4' : ''} 
               min-h-screen transition-all duration-200 ease-in-out
             `}>
               <Suspense fallback={<LoadingSpinner />}>
@@ -126,6 +128,7 @@ function App() {
                         }
                       />
                       <Route path="/" element={<Navigate to="/servers" />} />
+                      <Route path="/profile" element={<Profile />} />
                       <Route path="*" element={<NotFound />} />
 
                       <Route path="/admin/nodes" element={<AdminNodes />} />
@@ -158,6 +161,7 @@ function App() {
               </Suspense>
             </div>
           </div>
+        </SidebarProvider>
         </ProjectProvider>
       </SystemProvider>
     </AuthProvider>
