@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FolderIcon, PlusIcon, PencilIcon, TrashIcon, ServerIcon, AlertTriangleIcon, XIcon, CheckIcon } from 'lucide-react';
+import { FolderIcon, PlusIcon, PencilIcon, TrashIcon, AlertTriangleIcon, XIcon, CheckIcon } from 'lucide-react';
 import { useProjects } from '../contexts/ProjectContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 

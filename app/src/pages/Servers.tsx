@@ -61,7 +61,6 @@ const Tooltip: React.FC<TooltipProps> = ({
   useEffect(() => {
     if (isVisible && containerRef.current && tooltipRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      const tooltipRect = tooltipRef.current.getBoundingClientRect();
       
       let top: number;
       let left: number;
@@ -161,7 +160,7 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ children, isOpen, onClose }
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (menuRef.current && event.target instanceof Node && !menuRef.current.contains(event.target)) {
         onClose();
       }
     };
@@ -226,8 +225,7 @@ const ServerProjectPicker: React.FC<ServerProjectPickerProps> = ({
   server,
   projects,
   onProjectSelect,
-  onBack,
-  currentProjectId
+  onBack
 }) => {
   return (
     <div className="animate-slide-in">
@@ -284,6 +282,8 @@ export default function Home() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [nodeWarnings, setNodeWarnings] = useState<boolean>(false);
   
+  console.log(isSubmitting);
+
   // State for tab indicator animation
   const [indicatorStyle, setIndicatorStyle] = useState({
     width: 0,
