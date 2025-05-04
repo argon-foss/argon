@@ -12,6 +12,8 @@ import { authMiddleware, checkPermission } from '../middleware/auth';
 const router = Router();
 
 // Types
+// Updated interfaces for Units v3
+
 interface CargoFile {
   id: string;
   url: string;
@@ -24,8 +26,20 @@ interface CargoFile {
   };
 }
 
+// V3: Added serverControl configuration
+interface ServerControl {
+  readyRegex?: string; // Regex to detect when server is online
+  stopCommand?: string; // Command to gracefully stop the server
+}
+
+// V3: Updated with new fields
 interface DaemonServerConfig {
   dockerImage: string;
+  // V3: Available images (optional, for UI)
+  availableImages?: Array<{
+    image: string;
+    displayName: string;
+  }>;
   variables: Array<{
     name: string;
     description?: string;
@@ -43,19 +57,62 @@ interface DaemonServerConfig {
     script: string;
   };
   cargo?: CargoFile[];
+  // V3: Server control configuration
+  serverControl?: ServerControl;
 }
 
-// Validation schemas
+// V3: Docker image update request
+interface DockerImageUpdateRequest {
+  serverId: string;
+  dockerImage: string;
+}
+
+// V3: Server update request with docker image changes
+interface ServerUpdateRequest {
+  serverId: string;
+  name: string;
+  memoryLimit: number;
+  cpuLimit: number;
+  allocation: {
+    bindAddress: string;
+    port: number;
+  };
+  unitChanged?: boolean;
+  dockerImage?: string;
+  dockerImageChanged?: boolean;
+  startupCommand?: string;
+}
+
 const createServerSchema = z.object({
   name: z.string().min(1).max(100),
-  nodeId: z.string().uuid(),
-  allocationId: z.string().uuid(),
+  nodeId: z.string().uuid().optional(),
+  regionId: z.string().optional().transform(val => val === "" ? undefined : val),
+  allocationId: z.string().uuid().optional(),
   memoryMiB: z.number().int().min(128),
   diskMiB: z.number().int().min(1024),
   cpuPercent: z.number().min(1).max(100),
   unitId: z.string().uuid(),
   userId: z.string().uuid(),
-  projectId: z.string().uuid().optional() 
+  projectId: z.string().uuid().optional(),
+  // V3: Allow specifying a Docker image
+  dockerImage: z.string().optional(),
+  // V3: Allow customizing startup command
+  startupCommand: z.string().optional(),
+  // V3: Feature selections to save with the server
+  featureSelections: z.record(z.any()).optional()
+}).refine(data => {
+  // If regionId is present and not empty, it must be a valid UUID
+  if (data.regionId && data.regionId !== "") {
+    try {
+      z.string().uuid().parse(data.regionId);
+    } catch {
+      return false;
+    }
+  }
+  // Either nodeId or valid regionId must be present
+  return !!data.nodeId || (!!data.regionId && data.regionId !== "");
+}, {
+  message: "Either nodeId or a valid regionId must be provided"
 });
 
 const updateServerSchema = z.object({
@@ -64,9 +121,11 @@ const updateServerSchema = z.object({
   diskMiB: z.number().int().min(1024).optional(),
   cpuPercent: z.number().min(1).max(100).optional(),
   unitId: z.string().uuid().optional(),
-  projectId: z.string().uuid().optional()
-  // Note: We don't allow changing nodeId or allocationId here
-  // as that would require server transfer
+  projectId: z.string().uuid().optional(),
+  // V3: Allow setting a specific Docker image for this server
+  dockerImage: z.string().optional(),
+  // V3: Allow customizing startup command
+  startupCommand: z.string().optional()
 });
 
 async function makeDaemonRequest(
@@ -376,26 +435,126 @@ router.get('/:internalId/config', async (req, res) => {
       return res.status(404).json({ error: 'Server not found' });
     }
 
+    // Generate cargo URLs
+    const cargoFiles = await generateCargoUrls(server, server.unit);
+
+    // V3: Determine which Docker image to use
+    // If server has a specific image override, use it
+    // Otherwise use the unit's default image
+    const dockerImage = server.dockerImage || server.unit.defaultDockerImage || server.unit.dockerImage;
+    
+    // V3: Get the enhanced startup config
+    const startup = server.unit.startup || { userEditable: false };
+
     const config: DaemonServerConfig = {
-      dockerImage: server.unit!.dockerImage,
-      variables: server.unit!.environmentVariables.map(v => ({
+      dockerImage: dockerImage,
+      variables: server.unit.environmentVariables.map(v => ({
         name: v.name,
         description: v.description,
         defaultValue: v.defaultValue,
         rules: v.rules
       })),
-      startupCommand: server.unit!.defaultStartupCommand,
-      configFiles: server.unit!.configFiles,
+      startupCommand: server.startupCommand || server.unit.defaultStartupCommand,
+      configFiles: server.unit.configFiles,
       install: {
-        dockerImage: server.unit!.installScript.dockerImage,
-        entrypoint: server.unit!.installScript.entrypoint || 'bash',
-        script: server.unit!.installScript.script || '# No installation script provided'
+        dockerImage: server.unit.installScript.dockerImage,
+        entrypoint: server.unit.installScript.entrypoint || 'bash',
+        script: server.unit.installScript.script || '# No installation script provided'
+      },
+      cargo: cargoFiles,
+      // V3: Add server control configuration
+      serverControl: {
+        readyRegex: startup.readyRegex,
+        stopCommand: startup.stopCommand
       }
     };
 
     res.json(config);
   } catch (error) {
     console.error('Failed to fetch server config:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// V3: Add endpoint to change server's Docker image
+router.patch('/:id/docker-image', checkPermission(Permissions.USER), async (req, res) => {
+  try {
+    const server = await checkServerAccess(req, req.params.id);
+    
+    const schema = z.object({
+      dockerImage: z.string().min(1)
+    });
+    
+    const data = schema.parse(req.body);
+    
+    // Verify the Docker image is one of the available ones for this unit
+    const availableImages = server.unit.dockerImages || [];
+    if (!availableImages.some(di => di.image === data.dockerImage)) {
+      return res.status(400).json({ 
+        error: 'Selected Docker image is not available for this unit',
+        availableImages: availableImages 
+      });
+    }
+    
+    // Update server state to indicate it's updating
+    await updateServerState(server.id, 'updating');
+    
+    // Send update to daemon
+    await makeDaemonRequest(
+      'patch',
+      server.node,
+      `/api/v1/servers/${server.internalId}`,
+      {
+        serverId: server.internalId,
+        name: server.name,
+        memoryLimit: server.memoryMiB * 1024 * 1024,
+        cpuLimit: Math.floor(server.cpuPercent * 1024 / 100),
+        allocation: {
+          bindAddress: server.allocation.bindAddress,
+          port: server.allocation.port
+        },
+        dockerImage: data.dockerImage,
+        dockerImageChanged: true
+      }
+    );
+    
+    // Update the server in the database
+    const updatedServer = await db.servers.update(
+      { id: server.id },
+      { 
+        dockerImage: data.dockerImage,
+        state: 'running' // Reset state after update
+      }
+    );
+    
+    res.json({ 
+      dockerImage: updatedServer.dockerImage,
+      message: 'Docker image updated successfully' 
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error('Failed to update server Docker image:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// V3: Get available Docker images for a server
+router.get('/:id/docker-images', checkPermission(Permissions.USER), async (req, res) => {
+  try {
+    const server = await checkServerAccess(req, req.params.id);
+    
+    // Get available Docker images from the unit
+    const availableImages = server.unit.dockerImages || [];
+    const currentImage = server.dockerImage || server.unit.defaultDockerImage;
+    
+    res.json({
+      availableImages: availableImages,
+      currentImage: currentImage
+    });
+  } catch (error) {
+    console.error('Failed to fetch server Docker images:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -495,33 +654,6 @@ router.use(authMiddleware);
 // ADMIN ROUTES
 router.post('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
   try {
-    // Modified schema to make nodeId and allocationId optional when regionId is provided
-    const createServerSchema = z.object({
-      name: z.string().min(1).max(100),
-      nodeId: z.string().uuid().optional(),
-      regionId: z.string().optional().transform(val => val === "" ? undefined : val),
-      allocationId: z.string().uuid().optional(),
-      memoryMiB: z.number().int().min(128),
-      diskMiB: z.number().int().min(1024),
-      cpuPercent: z.number().min(1).max(100),
-      unitId: z.string().uuid(),
-      userId: z.string().uuid(),
-      projectId: z.string().uuid().optional() 
-    }).refine(data => {
-      // If regionId is present and not empty, it must be a valid UUID
-      if (data.regionId && data.regionId !== "") {
-        try {
-          z.string().uuid().parse(data.regionId);
-        } catch {
-          return false;
-        }
-      }
-      // Either nodeId or valid regionId must be present
-      return !!data.nodeId || (!!data.regionId && data.regionId !== "");
-    }, {
-      message: "Either nodeId or a valid regionId must be provided"
-    });
-
     const data = createServerSchema.parse(req.body);
     const serverId = randomUUID();
     const validationToken = randomUUID();
@@ -529,20 +661,8 @@ router.post('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
     let nodeId = data.nodeId;
     let allocationId = data.allocationId;
 
-    // If regionId is provided, find the best node in that region
+    // Auto-assign node if regionId is provided
     if (data.regionId) {
-      // Check if region exists
-      const region = await db.regions.findUnique({ id: data.regionId });
-      if (!region) {
-        return res.status(404).json({ error: 'Region not found' });
-      }
-
-      // Check if region is at capacity
-      const isAtCapacity = await db.regions.isRegionAtCapacity(data.regionId);
-      if (isAtCapacity) {
-        return res.status(400).json({ error: 'Region has reached its server limit' });
-      }
-
       // Find the best node in this region (or fallback if configured)
       nodeId = await db.regions.findBestNodeInRegion(data.regionId);
       
@@ -550,7 +670,7 @@ router.post('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
         return res.status(400).json({ error: 'No available nodes found in region or its fallback' });
       }
 
-      // If no allocation was specified, find an available one on this node
+      // Auto-assign allocation if needed
       if (!allocationId) {
         const allocation = await db.allocations.findFirst({
           where: { nodeId, assigned: false }
@@ -563,12 +683,12 @@ router.post('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
         allocationId = allocation.id;
       }
     } else {
-      // Regular node-based creation, but with allocation auto-assignment if needed
+      // Required nodeId without region
       if (!nodeId) {
         return res.status(400).json({ error: 'NodeId is required when regionId is not provided' });
       }
       
-      // If no allocation was specified, we'll automatically find one
+      // Auto-assign allocation if needed
       if (!allocationId) {
         const allocation = await db.allocations.findFirst({
           where: { nodeId, assigned: false }
@@ -609,11 +729,28 @@ router.post('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
       return res.status(404).json({ error: 'Unit not found' });
     }
 
+    // V3: Validate Docker image if specified
+    if (data.dockerImage) {
+      // Check if the image is in the unit's available images
+      if (unit.dockerImages && unit.dockerImages.length > 0) {
+        const isValidImage = unit.dockerImages.some(img => img.image === data.dockerImage);
+        if (!isValidImage) {
+          return res.status(400).json({ 
+            error: 'Selected Docker image is not available for this unit',
+            availableImages: unit.dockerImages
+          });
+        }
+      }
+    }
+
     // Mark allocation as assigned
     await db.allocations.update(
       { id: allocation.id },
       { assigned: true }
     );
+
+    // V3: Store feature selections as JSON
+    const featureSelections = data.featureSelections || {};
 
     // Create server in database with validation token
     const server = await db.servers.create({
@@ -623,10 +760,21 @@ router.post('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
       id: serverId,
       internalId: serverId,
       validationToken,
-      state: 'creating'
+      state: 'creating',
+      // V3: Store Docker image and startup command
+      dockerImage: data.dockerImage || unit.defaultDockerImage,
+      startupCommand: data.startupCommand || unit.defaultStartupCommand,
+      // V3: Store feature selections
+      metadata: JSON.stringify({
+        featureSelections,
+        version: 'argon/server:v3'
+      })
     });
 
     try {
+      // Determine which Docker image to use
+      const serverDockerImage = server.dockerImage || unit.defaultDockerImage || unit.dockerImage;
+
       // Send create request to daemon
       const daemonResponse = await makeDaemonRequest('post', node, '/api/v1/servers', {
         serverId,
@@ -637,7 +785,10 @@ router.post('/', checkPermission(Permissions.ADMIN), async (req: any, res) => {
         allocation: {
           bindAddress: allocation.bindAddress,
           port: allocation.port
-        }
+        },
+        // V3: Send Docker image and startup command
+        dockerImage: serverDockerImage,
+        startupCommand: server.startupCommand || unit.defaultStartupCommand
       });
 
       if (daemonResponse.validationToken !== validationToken) {

@@ -27,6 +27,10 @@ interface Unit {
   configFiles: Record<string, string>;
   environmentVariables: Record<string, string>;
   installScript: string[];
+  features: string[];
+  meta: {
+    version: string;
+  };
   startup: {
     command: string;
     parameters: string[];
@@ -100,13 +104,17 @@ interface Region {
 interface CreateFormData {
   name: string;
   nodeId?: string;
-  regionId?: string; // New field for region selection
-  unitId: string;
-  userId: string;
-  allocationId?: string; // Made optional to allow deletion
+  regionId?: string;
+  allocationId?: string;
   memoryMiB: number;
   diskMiB: number;
   cpuPercent: number;
+  unitId: string;
+  userId: string;
+  // Docker image selection for v3 units
+  dockerImage?: string;
+  // Startup command customization
+  startupCommand?: string;
 }
 
 interface EditFormData {
@@ -130,7 +138,9 @@ const AdminServersPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>('list');
   const [selectedServer, setSelectedServer] = useState<Server | null>(null);
-  
+  const [selectedUnitDockerImages, setSelectedUnitDockerImages] = useState<Array<{image: string, displayName: string}>>([]);
+  const [isUnitV3, setIsUnitV3] = useState(false);
+
   // Deployment tab state - moved to top level
   const [deploymentTab, setDeploymentTab] = useState<'nodes' | 'regions'>('nodes');
   const [loadingRegions, setLoadingRegions] = useState(false);
@@ -167,6 +177,15 @@ const AdminServersPage = () => {
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
+    if (createFormData.unitId) {
+      fetchUnitDetails(createFormData.unitId);
+    } else {
+      setSelectedUnitDockerImages([]);
+      setIsUnitV3(false);
+    }
+  }, [createFormData.unitId]);
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -191,6 +210,63 @@ const AdminServersPage = () => {
     );
     setFilteredUnits(filtered);
   }, [unitSearch, units]);
+
+  // Function to fetch unit details including Docker images
+  const fetchUnitDetails = async (unitId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/units/${unitId}/docker-images`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Check if this is a v3 unit with multiple Docker images
+        if (data.dockerImages && Array.isArray(data.dockerImages) && data.dockerImages.length > 0) {
+          setSelectedUnitDockerImages(data.dockerImages);
+          setIsUnitV3(true);
+          
+          // Auto-select the default Docker image
+          if (data.defaultDockerImage) {
+            updateFormData({ dockerImage: data.defaultDockerImage });
+          } else {
+            updateFormData({ dockerImage: data.dockerImages[0].image });
+          }
+        } else {
+          // This is a v2 unit with a single Docker image
+          const unitData = units.find(u => u.id === unitId);
+          if (unitData) {
+            setSelectedUnitDockerImages([{ 
+              image: unitData.dockerImage, 
+              displayName: 'Default Image' 
+            }]);
+            updateFormData({ dockerImage: unitData.dockerImage });
+          } else {
+            setSelectedUnitDockerImages([]);
+          }
+          setIsUnitV3(false);
+        }
+      } else {
+        // Fallback to v2 behavior
+        const unitData = units.find(u => u.id === unitId);
+        if (unitData) {
+          setSelectedUnitDockerImages([{ 
+            image: unitData.dockerImage, 
+            displayName: 'Default Image' 
+          }]);
+          updateFormData({ dockerImage: unitData.dockerImage });
+        } else {
+          setSelectedUnitDockerImages([]);
+        }
+        setIsUnitV3(false);
+      }
+    } catch (error) {
+      console.error('Failed to fetch unit Docker images:', error);
+      setSelectedUnitDockerImages([]);
+      setIsUnitV3(false);
+    }
+  };
 
   const fetchRegions = async () => {
     setLoadingRegions(true);
@@ -277,6 +353,11 @@ const AdminServersPage = () => {
         delete payload.allocationId;
       }
       
+      // If no startup command is provided, remove it from the payload
+      if (!payload.startupCommand) {
+        delete payload.startupCommand;
+      }
+      
       const token = localStorage.getItem('token');
       const response = await fetch('/api/servers', {
         method: 'POST',
@@ -294,6 +375,7 @@ const AdminServersPage = () => {
   
       await fetchData();
       setView('list');
+      // Reset form data including Docker image and startup command
       setCreateFormData({
         name: '',
         nodeId: '',
@@ -303,7 +385,9 @@ const AdminServersPage = () => {
         memoryMiB: 1024,
         diskMiB: 10240,
         cpuPercent: 100,
-        regionId: ''
+        regionId: '',
+        dockerImage: '',
+        startupCommand: ''
       });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to create server');
@@ -596,18 +680,66 @@ const AdminServersPage = () => {
           />
           <select
             value={createFormData.unitId}
-            onChange={(e) => updateFormData({ unitId: e.target.value })}
+            onChange={(e) => updateFormData({ 
+              unitId: e.target.value,
+              // Clear Docker image when changing unit
+              dockerImage: '' 
+            })}
             className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
             required
           >
             <option value="">Select a unit</option>
             {filteredUnits.map(unit => (
               <option key={unit.id} value={unit.id}>
-                {unit.name} ({unit.shortName})
+                {unit.name} ({unit.shortName}) {unit.meta?.version === 'argon/unit:v3' ? '(v3)' : ''}
               </option>
             ))}
           </select>
         </div>
+        
+        {/* V3: Docker Image Selection - only show if unit is selected and is v3 */}
+        {createFormData.unitId && selectedUnitDockerImages.length > 1 && isUnitV3 && (
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-700">
+              Docker Image
+            </label>
+            <select
+              value={createFormData.dockerImage}
+              onChange={(e) => updateFormData({ dockerImage: e.target.value })}
+              className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
+              required
+            >
+              <option value="">Select a Docker image</option>
+              {selectedUnitDockerImages.map((img, idx) => (
+                <option key={idx} value={img.image}>
+                  {img.displayName} ({img.image})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Select a Docker image for this server. Each image may offer different versions or features.
+            </p>
+          </div>
+        )}
+        
+        {/* V3: Custom startup command */}
+        {createFormData.unitId && isUnitV3 && (
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-700">
+              Startup Command (Optional)
+            </label>
+            <input
+              type="text"
+              value={createFormData.startupCommand || ''}
+              onChange={(e) => updateFormData({ startupCommand: e.target.value })}
+              className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
+              placeholder="Leave blank to use unit default"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Customize the startup command or leave blank to use the unit's default.
+            </p>
+          </div>
+        )}
   
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-700">

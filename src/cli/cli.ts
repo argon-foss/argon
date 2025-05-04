@@ -732,547 +732,1550 @@ boltCommand
       process.exit(1);
     }
   });
-
-// =========== UNIT COMMANDS ===========
-// Unit command group
-const unitCommand = program
-  .command('unit')
-  .description('Manage Argon units');
-
-// List units
-unitCommand
-  .command('list')
-  .description('List all units')
-  .option('-j, --json', 'Output as JSON')
-  .action(async (options) => {
-    try {
-      const units = await db.units.findMany();
-      
-      if (options.json) {
-        console.log(JSON.stringify(units, null, 2));
-      } else {
-        console.log(chalk.blue('=== Argon Units ==='));
+  
+  // =========== UNIT COMMANDS ===========
+  // Unit command group
+  const unitCommand = program
+    .command('unit')
+    .description('Manage Argon units');
+  
+  // List units
+  unitCommand
+    .command('list')
+    .description('List all units')
+    .option('-j, --json', 'Output as JSON')
+    .action(async (options) => {
+      try {
+        const units = await db.units.findMany();
         
-        if (units.length === 0) {
-          console.log(chalk.yellow('No units found'));
+        if (options.json) {
+          console.log(JSON.stringify(units, null, 2));
         } else {
-          const tableData = units.map(unit => ({
-            ID: unit.id,
-            Name: unit.name,
-            ShortName: unit.shortName,
-            DockerImage: unit.dockerImage
-          }));
+          console.log(chalk.blue('=== Argon Units ==='));
           
-          console.table(tableData);
-          console.log(chalk.blue(`Total units: ${units.length}`));
+          if (units.length === 0) {
+            console.log(chalk.yellow('No units found'));
+          } else {
+            const tableData = units.map(unit => ({
+              ID: unit.id,
+              Name: unit.name,
+              ShortName: unit.shortName,
+              Version: unit.meta?.version || 'v2',
+              Images: unit.dockerImages?.length || 1,
+              Features: unit.features?.length || 0
+            }));
+            
+            console.table(tableData);
+            console.log(chalk.blue(`Total units: ${units.length}`));
+          }
         }
+      } catch (error) {
+        console.error(chalk.red(`Error listing units: ${error.message}`));
+        process.exit(1);
       }
-    } catch (error) {
-      console.error(chalk.red(`Error listing units: ${error.message}`));
-      process.exit(1);
-    }
-  });
-
-// Get unit details
-unitCommand
-  .command('get')
-  .description('Get unit details')
-  .option('-i, --id <id>', 'Unit ID')
-  .option('-s, --short-name <shortName>', 'Unit short name')
-  .option('-j, --json', 'Output as JSON')
-  .action(async (options) => {
-    try {
-      let unit;
-      
-      if (!options.id && !options.shortName) {
-        const units = await db.units.findMany();
+    });
+  
+  // Get unit details
+  unitCommand
+    .command('get')
+    .description('Get unit details')
+    .option('-i, --id <id>', 'Unit ID')
+    .option('-s, --short-name <shortName>', 'Unit short name')
+    .option('-j, --json', 'Output as JSON')
+    .action(async (options) => {
+      try {
+        let unit;
         
-        if (units.length === 0) {
-          console.error(chalk.red('No units found'));
+        if (!options.id && !options.shortName) {
+          const units = await db.units.findMany();
+          
+          if (units.length === 0) {
+            console.error(chalk.red('No units found'));
+            process.exit(1);
+          }
+          
+          const { unitId } = await inquirer.prompt([
+            {
+              type: 'list',
+              name: 'unitId',
+              message: 'Select a unit:',
+              choices: units.map(unit => ({
+                name: `${unit.name} (${unit.shortName}) - ${unit.meta?.version || 'v2'}`,
+                value: unit.id
+              }))
+            }
+          ]);
+          
+          unit = await db.units.findUnique({ id: unitId });
+        } else if (options.id) {
+          unit = await db.units.findUnique({ id: options.id });
+        } else if (options.shortName) {
+          unit = await db.units.findFirst({ where: { shortName: options.shortName } });
+        }
+        
+        if (!unit) {
+          console.error(chalk.red('Unit not found'));
           process.exit(1);
         }
         
-        const { unitId } = await inquirer.prompt([
+        if (options.json) {
+          console.log(JSON.stringify(unit, null, 2));
+        } else {
+          console.log(chalk.blue(`=== Unit: ${unit.name} ===`));
+          console.log(chalk.blue(`ID: ${unit.id}`));
+          console.log(chalk.blue(`Short Name: ${unit.shortName}`));
+          console.log(chalk.blue(`Description: ${unit.description}`));
+          
+          // V3: Check if unit has meta info
+          const isV3 = unit.meta?.version === 'argon/unit:v3';
+          if (isV3) {
+            console.log(chalk.blue('\nUnit Version: v3'));
+            if (unit.meta?.author) console.log(chalk.blue(`Author: ${unit.meta.author}`));
+            if (unit.meta?.website) console.log(chalk.blue(`Website: ${unit.meta.website}`));
+            if (unit.meta?.supportUrl) console.log(chalk.blue(`Support URL: ${unit.meta.supportUrl}`));
+          } else {
+            console.log(chalk.blue('\nUnit Version: v2'));
+          }
+          
+          // V3: Docker images
+          if (isV3 && unit.dockerImages && unit.dockerImages.length > 0) {
+            console.log(chalk.blue('\nDocker Images:'));
+            unit.dockerImages.forEach((img, idx) => {
+              const isDefault = img.image === unit.defaultDockerImage;
+              console.log(`  ${idx + 1}. ${img.displayName} (${img.image})${isDefault ? ' [DEFAULT]' : ''}`);
+            });
+          } else {
+            console.log(chalk.blue(`\nDocker Image: ${unit.dockerImage}`));
+          }
+          
+          console.log(chalk.blue(`Default Startup Command: ${unit.defaultStartupCommand}`));
+          
+          // V3: Enhanced startup configuration
+          if (isV3 && unit.startup) {
+            console.log(chalk.blue('\nStartup Configuration:'));
+            console.log(`  User Editable: ${unit.startup.userEditable ? 'Yes' : 'No'}`);
+            if (unit.startup.readyRegex) {
+              console.log(`  Ready Detection: ${unit.startup.readyRegex}`);
+            }
+            if (unit.startup.stopCommand) {
+              console.log(`  Stop Command: ${unit.startup.stopCommand}`);
+            }
+          } else {
+            console.log(chalk.blue(`\nStartup User Editable: ${unit.startup?.userEditable ? 'Yes' : 'No'}`));
+          }
+          
+          console.log(chalk.blue('\nEnvironment Variables:'));
+          if (unit.environmentVariables.length === 0) {
+            console.log(chalk.yellow('  No environment variables defined'));
+          } else {
+            unit.environmentVariables.forEach(env => {
+              console.log(chalk.green(`  - ${env.name}`));
+              console.log(`    Description: ${env.description || 'N/A'}`);
+              console.log(`    Default: ${env.defaultValue}`);
+              console.log(`    Required: ${env.required ? 'Yes' : 'No'}`);
+              console.log(`    User Editable: ${env.userEditable ? 'Yes' : 'No'}`);
+              console.log(``);
+            });
+          }
+          
+          console.log(chalk.blue('Config Files:'));
+          if (unit.configFiles.length === 0) {
+            console.log(chalk.yellow('  No config files defined'));
+          } else {
+            unit.configFiles.forEach(config => {
+              console.log(chalk.green(`  - ${config.path}`));
+            });
+          }
+          
+          console.log(chalk.blue('\nInstall Script:'));
+          console.log(`  Docker Image: ${unit.installScript.dockerImage}`);
+          console.log(`  Entrypoint: ${unit.installScript.entrypoint}`);
+          console.log(`  Script:\n${unit.installScript.script}`);
+          
+          // V3: Features
+          if (isV3 && unit.features && unit.features.length > 0) {
+            console.log(chalk.blue('\nFeatures:'));
+            unit.features.forEach((feature, idx) => {
+              console.log(chalk.green(`  ${idx + 1}. ${feature.name} [${feature.type.toUpperCase()}]`));
+              console.log(`     Description: ${feature.description}`);
+              if (feature.iconPath) {
+                console.log(`     Icon: ${feature.iconPath}`);
+              }
+              if (feature.uiData) {
+                console.log(`     UI Component: ${feature.uiData.component}`);
+                if (feature.uiData.props) {
+                  console.log(`     Properties: ${JSON.stringify(feature.uiData.props)}`);
+                }
+              }
+              console.log('');
+            });
+          }
+        }
+      } catch (error) {
+        console.error(chalk.red(`Error getting unit: ${error.message}`));
+        process.exit(1);
+      }
+    });
+  
+  // Create unit
+  unitCommand
+    .command('create')
+    .description('Create a new unit')
+    .option('-f, --file <path>', 'JSON file containing unit configuration')
+    .option('-i, --interactive', 'Create unit interactively')
+    .option('-v, --v3', 'Create a v3 unit with extended features')
+    .action(async (options) => {
+      try {
+        let unitData;
+        
+        if (options.file) {
+          // Read from file
+          if (!existsSync(options.file)) {
+            console.error(chalk.red(`File not found: ${options.file}`));
+            process.exit(1);
+          }
+          
+          try {
+            const fileContent = readFileSync(options.file, 'utf-8');
+            unitData = JSON.parse(fileContent);
+            
+            // Ensure v3 format if requested
+            if (options.v3 && (!unitData.meta || unitData.meta.version !== 'argon/unit:v3')) {
+              // Convert to v3 format
+              unitData = convertUnitToV3(unitData);
+            }
+          } catch (error) {
+            console.error(chalk.red(`Error parsing file: ${error.message}`));
+            process.exit(1);
+          }
+        } else if (options.interactive) {
+          // Interactive mode
+          unitData = await promptUnitDetails(options.v3);
+        } else {
+          console.error(chalk.yellow('Please specify either --file or --interactive'));
+          process.exit(1);
+        }
+        
+        // Check if shortName already exists
+        const existing = await db.units.findFirst({
+          where: { shortName: unitData.shortName }
+        });
+        
+        if (existing) {
+          console.error(chalk.red(`Error: A unit with short name '${unitData.shortName}' already exists`));
+          process.exit(1);
+        }
+        
+        // Create the unit
+        const unit = await db.units.create(unitData);
+        
+        console.log(chalk.green(`Unit '${unit.name}' created successfully!`));
+        console.log(chalk.green(`ID: ${unit.id}`));
+        console.log(chalk.green(`Short Name: ${unit.shortName}`));
+        console.log(chalk.green(`Version: ${unit.meta?.version || 'v2'}`));
+      } catch (error) {
+        console.error(chalk.red(`Error creating unit: ${error.message}`));
+        process.exit(1);
+      }
+    });
+  
+  // Convert unit
+  unitCommand
+    .command('convert')
+    .description('Convert a unit to v3 format')
+    .option('-i, --id <id>', 'Unit ID')
+    .option('-s, --short-name <shortName>', 'Unit short name')
+    .option('-o, --output <path>', 'Output file path')
+    .action(async (options) => {
+      try {
+        let unit;
+        
+        if (!options.id && !options.shortName) {
+          const units = await db.units.findMany();
+          
+          if (units.length === 0) {
+            console.error(chalk.red('No units found'));
+            process.exit(1);
+          }
+          
+          const { unitId } = await inquirer.prompt([
+            {
+              type: 'list',
+              name: 'unitId',
+              message: 'Select a unit to convert:',
+              choices: units
+                .filter(u => !u.meta || u.meta.version !== 'argon/unit:v3')
+                .map(unit => ({
+                  name: `${unit.name} (${unit.shortName})`,
+                  value: unit.id
+                }))
+            }
+          ]);
+          
+          unit = await db.units.findUnique({ id: unitId });
+        } else if (options.id) {
+          unit = await db.units.findUnique({ id: options.id });
+        } else if (options.shortName) {
+          unit = await db.units.findFirst({ where: { shortName: options.shortName } });
+        }
+        
+        if (!unit) {
+          console.error(chalk.red('Unit not found'));
+          process.exit(1);
+        }
+        
+        // Check if unit is already v3
+        if (unit.meta && unit.meta.version === 'argon/unit:v3') {
+          console.log(chalk.yellow(`Unit '${unit.name}' is already in v3 format`));
+          process.exit(0);
+        }
+        
+        // Convert to v3
+        const v3Unit = convertUnitToV3(unit);
+        
+        if (options.output) {
+          // Write to file
+          writeFileSync(options.output, JSON.stringify(v3Unit, null, 2));
+          console.log(chalk.green(`Converted unit written to ${options.output}`));
+        } else {
+          // Prompt for update
+          const { updateUnit } = await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'updateUnit',
+              message: `Update unit '${unit.name}' to v3 format in the database?`,
+              default: true
+            }
+          ]);
+          
+          if (updateUnit) {
+            await db.units.update({ id: unit.id }, v3Unit);
+            console.log(chalk.green(`Unit '${unit.name}' updated to v3 format successfully!`));
+          } else {
+            // Display the converted unit
+            console.log(chalk.yellow('Conversion complete but not saved. Output:'));
+            console.log(JSON.stringify(v3Unit, null, 2));
+          }
+        }
+      } catch (error) {
+        console.error(chalk.red(`Error converting unit: ${error.message}`));
+        process.exit(1);
+      }
+    });
+  
+  // Feature commands
+  unitCommand
+    .command('features')
+    .description('Manage unit features (v3)')
+    .option('-i, --id <id>', 'Unit ID')
+    .option('-s, --short-name <shortName>', 'Unit short name')
+    .option('-a, --add', 'Add a new feature')
+    .option('-r, --remove <featureName>', 'Remove a feature by name')
+    .option('-l, --list', 'List all features')
+    .action(async (options) => {
+      try {
+        let unit;
+        
+        if (!options.id && !options.shortName) {
+          const units = await db.units.findMany();
+          
+          if (units.length === 0) {
+            console.error(chalk.red('No units found'));
+            process.exit(1);
+          }
+          
+          const { unitId } = await inquirer.prompt([
+            {
+              type: 'list',
+              name: 'unitId',
+              message: 'Select a unit:',
+              choices: units.map(unit => ({
+                name: `${unit.name} (${unit.shortName}) - ${unit.meta?.version || 'v2'}`,
+                value: unit.id
+              }))
+            }
+          ]);
+          
+          unit = await db.units.findUnique({ id: unitId });
+        } else if (options.id) {
+          unit = await db.units.findUnique({ id: options.id });
+        } else if (options.shortName) {
+          unit = await db.units.findFirst({ where: { shortName: options.shortName } });
+        }
+        
+        if (!unit) {
+          console.error(chalk.red('Unit not found'));
+          process.exit(1);
+        }
+        
+        // Ensure unit is v3
+        if (!unit.meta || unit.meta.version !== 'argon/unit:v3') {
+          const { convertToV3 } = await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'convertToV3',
+              message: `Unit '${unit.name}' is not in v3 format. Convert it first?`,
+              default: true
+            }
+          ]);
+          
+          if (convertToV3) {
+            unit = convertUnitToV3(unit);
+            await db.units.update({ id: unit.id }, unit);
+            console.log(chalk.green(`Unit '${unit.name}' converted to v3 format`));
+          } else {
+            console.error(chalk.red('Features are only available for v3 units'));
+            process.exit(1);
+          }
+        }
+        
+        // Initialize features array if not present
+        if (!Array.isArray(unit.features)) {
+          unit.features = [];
+        }
+        
+        // List features
+        if (options.list || (!options.add && !options.remove)) {
+          console.log(chalk.blue(`=== Features for ${unit.name} ===`));
+          
+          if (unit.features.length === 0) {
+            console.log(chalk.yellow('  No features defined'));
+          } else {
+            unit.features.forEach((feature, idx) => {
+              console.log(chalk.green(`  ${idx + 1}. ${feature.name} [${feature.type.toUpperCase()}]`));
+              console.log(`     Description: ${feature.description}`);
+              if (feature.iconPath) {
+                console.log(`     Icon: ${feature.iconPath}`);
+              }
+              if (feature.uiData) {
+                console.log(`     UI Component: ${feature.uiData.component}`);
+              }
+              console.log('');
+            });
+          }
+        }
+        
+        // Add feature
+        if (options.add) {
+          const feature = await promptFeatureDetails();
+          
+          // Check for duplicate name
+          if (unit.features.some(f => f.name === feature.name)) {
+            console.error(chalk.red(`A feature with name '${feature.name}' already exists`));
+            process.exit(1);
+          }
+          
+          unit.features.push(feature);
+          await db.units.update({ id: unit.id }, { features: unit.features });
+          console.log(chalk.green(`Feature '${feature.name}' added successfully!`));
+        }
+        
+        // Remove feature
+        if (options.remove) {
+          const featureName = options.remove;
+          const featureIndex = unit.features.findIndex(f => f.name === featureName);
+          
+          if (featureIndex === -1) {
+            console.error(chalk.red(`Feature '${featureName}' not found`));
+            process.exit(1);
+          }
+          
+          unit.features.splice(featureIndex, 1);
+          await db.units.update({ id: unit.id }, { features: unit.features });
+          console.log(chalk.green(`Feature '${featureName}' removed successfully!`));
+        }
+      } catch (error) {
+        console.error(chalk.red(`Error managing features: ${error.message}`));
+        process.exit(1);
+      }
+    });
+
+  // Seed units command
+unitCommand
+.command('seed')
+.description('Download and import units from GitHub repository')
+.option('-r, --repo <repo>', 'GitHub repository (default: argon-foss/units)')
+.option('-b, --branch <branch>', 'Branch name (default: main)')
+.option('-f, --force', 'Force overwrite existing units')
+.option('-v, --v3-only', 'Only import v3 units')
+.action(async (options) => {
+  const repo = options.repo || 'argon-foss/units';
+  const branch = options.branch || 'main';
+  const baseUrl = `https://raw.githubusercontent.com/${repo}/${branch}`;
+  
+  console.log(chalk.blue(`Fetching units from ${repo} (${branch})...`));
+  
+  try {
+    // Create a temp directory for downloads
+    const tempDir = join(PROJECT_ROOT, 'temp_units');
+    if (existsSync(tempDir)) {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+    await mkdir(tempDir, { recursive: true });
+    
+    // Download master.yaml file
+    console.log(chalk.blue(`Downloading master.yaml...`));
+    const masterYamlUrl = `${baseUrl}/master.yaml`;
+    
+    let masterYaml;
+    try {
+      const response = await fetch(masterYamlUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download master.yaml: ${response.statusText}`);
+      }
+      masterYaml = await response.text();
+    } catch (error) {
+      console.error(chalk.red(`Error downloading master.yaml: ${error.message}`));
+      process.exit(1);
+    }
+    
+    // Parse YAML
+    const yaml = require('js-yaml');
+    let masterConfig;
+    try {
+      masterConfig = yaml.load(masterYaml);
+    } catch (error) {
+      console.error(chalk.red(`Error parsing master.yaml: ${error.message}`));
+      process.exit(1);
+    }
+    
+    if (!masterConfig.images || !Array.isArray(masterConfig.images)) {
+      console.error(chalk.red(`Invalid master.yaml format: 'images' array not found`));
+      process.exit(1);
+    }
+    
+    // Process each image
+    const totalImages = masterConfig.images.length;
+    console.log(chalk.blue(`Found ${totalImages} units to import`));
+    
+    let successCount = 0;
+    let skipCount = 0;
+    let errorCount = 0;
+    let v3Count = 0;
+    
+    for (let i = 0; i < totalImages; i++) {
+      const image = masterConfig.images[i];
+      console.log(chalk.blue(`Processing [${i+1}/${totalImages}] ${image.name}...`));
+      
+      // Download unit JSON file
+      const jsonPath = image.src;
+      const jsonUrl = `${baseUrl}/${jsonPath}`;
+      
+      try {
+        // Download JSON
+        const response = await fetch(jsonUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to download ${jsonPath}: ${response.statusText}`);
+        }
+        
+        const unitJson = await response.text();
+        let unitData = JSON.parse(unitJson);
+        
+        // Check if this is a v3 unit or needs conversion
+        const isV3 = unitData.meta && unitData.meta.version === 'argon/unit:v3';
+        
+        // If v3-only flag is set, skip non-v3 units
+        if (options.v3Only && !isV3) {
+          console.log(chalk.yellow(`Skipping non-v3 unit '${unitData.name}'`));
+          skipCount++;
+          continue;
+        }
+        
+        // Auto-convert to v3 if not already
+        if (!isV3) {
+          console.log(chalk.yellow(`Converting '${unitData.name}' to v3 format...`));
+          unitData = convertUnitToV3(unitData);
+        } else {
+          v3Count++;
+        }
+        
+        // Check if unit already exists
+        const existingUnit = await db.units.findFirst({
+          where: { shortName: unitData.shortName }
+        });
+        
+        if (existingUnit && !options.force) {
+          console.log(chalk.yellow(`Unit '${unitData.name}' (${unitData.shortName}) already exists, skipping`));
+          skipCount++;
+          continue;
+        }
+        
+        if (existingUnit && options.force) {
+          // Update existing unit
+          console.log(chalk.yellow(`Updating existing unit '${unitData.name}' (${unitData.shortName})...`));
+          await db.units.update({ id: existingUnit.id }, unitData);
+          console.log(chalk.green(`Unit '${unitData.name}' updated successfully`));
+        } else {
+          // Create new unit
+          const newUnit = await db.units.create(unitData);
+          console.log(chalk.green(`Unit '${newUnit.name}' imported successfully`));
+        }
+        
+        successCount++;
+      } catch (error) {
+        console.error(chalk.red(`Error processing ${image.name}: ${error.message}`));
+        errorCount++;
+      }
+    }
+    
+    // Clean up temp directory
+    await rm(tempDir, { recursive: true, force: true });
+    
+    // Print summary
+    console.log(chalk.blue(`=== Import Summary ===`));
+    console.log(chalk.green(`Successfully imported/updated: ${successCount}`));
+    console.log(chalk.yellow(`Skipped: ${skipCount}`));
+    console.log(chalk.red(`Errors: ${errorCount}`));
+    if (v3Count > 0) {
+      console.log(chalk.blue(`V3 units: ${v3Count}`));
+    }
+    
+    if (errorCount > 0) {
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error(chalk.red(`Error seeding units: ${error.message}`));
+    process.exit(1);
+  }
+});
+  
+  // Docker image commands
+  unitCommand
+    .command('images')
+    .description('Manage unit Docker images (v3)')
+    .option('-i, --id <id>', 'Unit ID')
+    .option('-s, --short-name <shortName>', 'Unit short name')
+    .option('-a, --add', 'Add a new Docker image')
+    .option('-r, --remove <imageTag>', 'Remove a Docker image by tag')
+    .option('-d, --default <imageTag>', 'Set default Docker image')
+    .option('-l, --list', 'List all Docker images')
+    .action(async (options) => {
+      try {
+        let unit;
+        
+        if (!options.id && !options.shortName) {
+          const units = await db.units.findMany();
+          
+          if (units.length === 0) {
+            console.error(chalk.red('No units found'));
+            process.exit(1);
+          }
+          
+          const { unitId } = await inquirer.prompt([
+            {
+              type: 'list',
+              name: 'unitId',
+              message: 'Select a unit:',
+              choices: units.map(unit => ({
+                name: `${unit.name} (${unit.shortName}) - ${unit.meta?.version || 'v2'}`,
+                value: unit.id
+              }))
+            }
+          ]);
+          
+          unit = await db.units.findUnique({ id: unitId });
+        } else if (options.id) {
+          unit = await db.units.findUnique({ id: options.id });
+        } else if (options.shortName) {
+          unit = await db.units.findFirst({ where: { shortName: options.shortName } });
+        }
+        
+        if (!unit) {
+          console.error(chalk.red('Unit not found'));
+          process.exit(1);
+        }
+        
+        // Ensure unit is v3
+        if (!unit.meta || unit.meta.version !== 'argon/unit:v3') {
+          const { convertToV3 } = await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'convertToV3',
+              message: `Unit '${unit.name}' is not in v3 format. Convert it first?`,
+              default: true
+            }
+          ]);
+          
+          if (convertToV3) {
+            unit = convertUnitToV3(unit);
+            await db.units.update({ id: unit.id }, unit);
+            console.log(chalk.green(`Unit '${unit.name}' converted to v3 format`));
+          } else {
+            console.error(chalk.red('Multiple Docker images are only available for v3 units'));
+            process.exit(1);
+          }
+        }
+        
+        // Initialize dockerImages array if not present
+        if (!Array.isArray(unit.dockerImages)) {
+          if (unit.dockerImage) {
+            unit.dockerImages = [
+              { image: unit.dockerImage, displayName: 'Default Image' }
+            ];
+            unit.defaultDockerImage = unit.dockerImage;
+          } else {
+            unit.dockerImages = [];
+            unit.defaultDockerImage = '';
+          }
+        }
+        
+        // List images
+        if (options.list || (!options.add && !options.remove && !options.default)) {
+          console.log(chalk.blue(`=== Docker Images for ${unit.name} ===`));
+          
+          if (unit.dockerImages.length === 0) {
+            console.log(chalk.yellow('  No Docker images defined'));
+          } else {
+            unit.dockerImages.forEach((img, idx) => {
+              const isDefault = img.image === unit.defaultDockerImage;
+              console.log(`  ${idx + 1}. ${img.displayName} (${img.image})${isDefault ? ' [DEFAULT]' : ''}`);
+            });
+          }
+        }
+        
+        // Add image
+        if (options.add) {
+          const image = await promptDockerImageDetails();
+          
+          // Check for duplicate
+          if (unit.dockerImages.some(img => img.image === image.image)) {
+            console.error(chalk.red(`An image with tag '${image.image}' already exists`));
+            process.exit(1);
+          }
+          
+          unit.dockerImages.push(image);
+          
+          // Set as default if it's the first image
+          if (unit.dockerImages.length === 1 || !unit.defaultDockerImage) {
+            unit.defaultDockerImage = image.image;
+            unit.dockerImage = image.image; // For backward compatibility
+          }
+          
+          await db.units.update(
+            { id: unit.id }, 
+            { 
+              dockerImages: unit.dockerImages,
+              defaultDockerImage: unit.defaultDockerImage,
+              dockerImage: unit.dockerImage 
+            }
+          );
+          console.log(chalk.green(`Docker image '${image.image}' added successfully!`));
+        }
+        
+        // Remove image
+        if (options.remove) {
+          const imageTag = options.remove;
+          const imageIndex = unit.dockerImages.findIndex(img => img.image === imageTag);
+          
+          if (imageIndex === -1) {
+            console.error(chalk.red(`Docker image '${imageTag}' not found`));
+            process.exit(1);
+          }
+          
+          // Check if it's the default image
+          const isDefault = unit.defaultDockerImage === imageTag;
+          
+          // Don't allow removing the only image
+          if (unit.dockerImages.length === 1) {
+            console.error(chalk.red(`Cannot remove the only Docker image. Add another image first.`));
+            process.exit(1);
+          }
+          
+          unit.dockerImages.splice(imageIndex, 1);
+          
+          // Update default if needed
+          if (isDefault && unit.dockerImages.length > 0) {
+            unit.defaultDockerImage = unit.dockerImages[0].image;
+            unit.dockerImage = unit.dockerImages[0].image; // For backward compatibility
+          }
+          
+          await db.units.update(
+            { id: unit.id }, 
+            { 
+              dockerImages: unit.dockerImages,
+              defaultDockerImage: unit.defaultDockerImage,
+              dockerImage: unit.dockerImage 
+            }
+          );
+          console.log(chalk.green(`Docker image '${imageTag}' removed successfully!`));
+        }
+        
+        // Set default image
+        if (options.default) {
+          const imageTag = options.default;
+          const image = unit.dockerImages.find(img => img.image === imageTag);
+          
+          if (!image) {
+            console.error(chalk.red(`Docker image '${imageTag}' not found`));
+            process.exit(1);
+          }
+          
+          unit.defaultDockerImage = imageTag;
+          unit.dockerImage = imageTag; // For backward compatibility
+          
+          await db.units.update(
+            { id: unit.id }, 
+            { 
+              defaultDockerImage: unit.defaultDockerImage,
+              dockerImage: unit.dockerImage 
+            }
+          );
+          console.log(chalk.green(`Default Docker image set to '${imageTag}' successfully!`));
+        }
+      } catch (error) {
+        console.error(chalk.red(`Error managing Docker images: ${error.message}`));
+        process.exit(1);
+      }
+    });
+  
+  // Meta information commands
+  unitCommand
+    .command('meta')
+    .description('Manage unit metadata (v3)')
+    .option('-i, --id <id>', 'Unit ID')
+    .option('-s, --short-name <shortName>', 'Unit short name')
+    .option('-a, --author <author>', 'Set author')
+    .option('-w, --website <url>', 'Set website URL')
+    .option('-u, --support-url <url>', 'Set support URL')
+    .option('-g, --get', 'Get metadata')
+    .action(async (options) => {
+      try {
+        let unit;
+        
+        if (!options.id && !options.shortName) {
+          const units = await db.units.findMany();
+          
+          if (units.length === 0) {
+            console.error(chalk.red('No units found'));
+            process.exit(1);
+          }
+          
+          const { unitId } = await inquirer.prompt([
+            {
+              type: 'list',
+              name: 'unitId',
+              message: 'Select a unit:',
+              choices: units.map(unit => ({
+                name: `${unit.name} (${unit.shortName}) - ${unit.meta?.version || 'v2'}`,
+                value: unit.id
+              }))
+            }
+          ]);
+          
+          unit = await db.units.findUnique({ id: unitId });
+        } else if (options.id) {
+          unit = await db.units.findUnique({ id: options.id });
+        } else if (options.shortName) {
+          unit = await db.units.findFirst({ where: { shortName: options.shortName } });
+        }
+        
+        if (!unit) {
+          console.error(chalk.red('Unit not found'));
+          process.exit(1);
+        }
+        
+        // Ensure unit is v3
+        if (!unit.meta || unit.meta.version !== 'argon/unit:v3') {
+          const { convertToV3 } = await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'convertToV3',
+              message: `Unit '${unit.name}' is not in v3 format. Convert it first?`,
+              default: true
+            }
+          ]);
+          
+          if (convertToV3) {
+            unit = convertUnitToV3(unit);
+            await db.units.update({ id: unit.id }, unit);
+            console.log(chalk.green(`Unit '${unit.name}' converted to v3 format`));
+          } else {
+            console.error(chalk.red('Metadata is only available for v3 units'));
+            process.exit(1);
+          }
+        }
+        
+        // Get metadata
+        if (options.get || (!options.author && !options.website && !options.supportUrl)) {
+          console.log(chalk.blue(`=== Metadata for ${unit.name} ===`));
+          console.log(`  Version: ${unit.meta.version}`);
+          console.log(`  Author: ${unit.meta.author || 'Not set'}`);
+          console.log(`  Website: ${unit.meta.website || 'Not set'}`);
+          console.log(`  Support URL: ${unit.meta.supportUrl || 'Not set'}`);
+        }
+        
+        // Update metadata
+        let metaUpdated = false;
+        const updatedMeta = { ...unit.meta };
+        
+        if (options.author) {
+          updatedMeta.author = options.author;
+          metaUpdated = true;
+        }
+        
+        if (options.website) {
+          updatedMeta.website = options.website;
+          metaUpdated = true;
+        }
+        
+        if (options.supportUrl) {
+          updatedMeta.supportUrl = options.supportUrl;
+          metaUpdated = true;
+        }
+        
+        if (metaUpdated) {
+          await db.units.update({ id: unit.id }, { meta: updatedMeta });
+          console.log(chalk.green(`Metadata updated successfully!`));
+        }
+      } catch (error) {
+        console.error(chalk.red(`Error managing metadata: ${error.message}`));
+        process.exit(1);
+      }
+    });
+  
+  // =========== HELPER FUNCTIONS FOR V3 ===========
+  
+  // Helper function to convert a v2 unit to v3
+  function convertUnitToV3(unit) {
+    // Create a copy of the unit
+    const v3Unit = { ...unit };
+    
+    // Add meta section
+    v3Unit.meta = {
+      version: 'argon/unit:v3',
+      author: '',
+      website: '',
+      supportUrl: ''
+    };
+    
+    // Convert single Docker image to array
+    if (!v3Unit.dockerImages) {
+      v3Unit.dockerImages = [];
+    }
+    
+    if (v3Unit.dockerImage && v3Unit.dockerImages.length === 0) {
+      v3Unit.dockerImages = [
+        { image: v3Unit.dockerImage, displayName: 'Default Image' }
+      ];
+    }
+    
+    // Set default Docker image
+    if (v3Unit.dockerImages.length > 0 && !v3Unit.defaultDockerImage) {
+      v3Unit.defaultDockerImage = v3Unit.dockerImages[0].image;
+    } else if (v3Unit.dockerImage && !v3Unit.defaultDockerImage) {
+      v3Unit.defaultDockerImage = v3Unit.dockerImage;
+    }
+    
+    // Ensure backward compatibility
+    if (v3Unit.defaultDockerImage && !v3Unit.dockerImage) {
+      v3Unit.dockerImage = v3Unit.defaultDockerImage;
+    }
+    
+    // Initialize features array
+    if (!v3Unit.features) {
+      v3Unit.features = [];
+    }
+    
+    // Enhance startup configuration
+    if (!v3Unit.startup) {
+      v3Unit.startup = { userEditable: false };
+    } else if (typeof v3Unit.startup === 'object') {
+      // Add v3 startup fields if not present
+      if (v3Unit.startup.readyRegex === undefined) {
+        v3Unit.startup.readyRegex = '';
+      }
+      if (v3Unit.startup.stopCommand === undefined) {
+        v3Unit.startup.stopCommand = '';
+      }
+    }
+    
+    // Check for EULA environment variable and add feature if found
+    const hasEula = v3Unit.environmentVariables.some(
+      env => env.name === 'EULA' || env.name === 'MC_EULA' || env.name.toLowerCase().includes('eula')
+    );
+    
+    if (hasEula && !v3Unit.features.some(f => f.name === 'eula-agreement')) {
+      v3Unit.features.push({
+        name: 'eula-agreement',
+        description: 'Minecraft EULA acceptance is required to run the server',
+        type: 'required',
+        uiData: {
+          component: 'checkbox',
+          props: {
+            label: 'I accept the Minecraft End User License Agreement',
+            link: 'https://www.minecraft.net/en-us/eula'
+          }
+        }
+      });
+    }
+    
+    return v3Unit;
+  }
+  
+  // Helper function to prompt for unit details including v3 fields
+  async function promptUnitDetails(isV3 = false) {
+    const unitData: any = {};
+    
+    // Basic information
+    const basicInfo = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'name',
+        message: 'Enter unit name:',
+        validate: (input) => input.length > 0 ? true : 'Name cannot be empty'
+      },
+      {
+        type: 'input',
+        name: 'shortName',
+        message: 'Enter unit short name (lowercase, alphanumeric with hyphens):',
+        validate: (input) => {
+          if (!/^[a-z0-9-]+$/.test(input)) {
+            return 'Short name must contain only lowercase letters, numbers, and hyphens';
+          }
+          return true;
+        }
+      },
+      {
+        type: 'input',
+        name: 'description',
+        message: 'Enter unit description:',
+        validate: (input) => input.length > 0 ? true : 'Description cannot be empty'
+      }
+    ]);
+    
+    Object.assign(unitData, basicInfo);
+    
+    // V3: Docker images
+    if (isV3) {
+      unitData.dockerImages = [];
+      unitData.defaultDockerImage = '';
+      
+      const { addDockerImages } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'addDockerImages',
+          message: 'Would you like to add Docker images?',
+          default: true
+        }
+      ]);
+      
+      if (addDockerImages) {
+        let addMore = true;
+        
+        while (addMore) {
+          const image = await promptDockerImageDetails();
+          unitData.dockerImages.push(image);
+          
+          // Set as default if it's the first image
+          if (unitData.dockerImages.length === 1) {
+            unitData.defaultDockerImage = image.image;
+            unitData.dockerImage = image.image; // For backward compatibility
+          }
+          
+          const { continueAdding } = await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'continueAdding',
+              message: 'Add another Docker image?',
+              default: false
+            }
+          ]);
+          
+          addMore = continueAdding;
+        }
+        
+        // If more than one image, ask which should be the default
+        if (unitData.dockerImages.length > 1) {
+          const { defaultImage } = await inquirer.prompt([
+            {
+              type: 'list',
+              name: 'defaultImage',
+              message: 'Select the default Docker image:',
+              choices: unitData.dockerImages.map(img => ({
+                name: `${img.displayName} (${img.image})`,
+                value: img.image
+              }))
+            }
+          ]);
+          
+          unitData.defaultDockerImage = defaultImage;
+          unitData.dockerImage = defaultImage; // For backward compatibility
+        }
+      } else {
+        // Fallback to asking for a single Docker image
+        const { dockerImage } = await inquirer.prompt([
           {
-            type: 'list',
-            name: 'unitId',
-            message: 'Select a unit:',
-            choices: units.map(unit => ({
-              name: `${unit.name} (${unit.shortName})`,
-              value: unit.id
-            }))
+            type: 'input',
+            name: 'dockerImage',
+            message: 'Enter Docker image:',
+            validate: (input) => input.length > 0 ? true : 'Docker image cannot be empty'
           }
         ]);
         
-        unit = await db.units.findUnique({ id: unitId });
-      } else if (options.id) {
-        unit = await db.units.findUnique({ id: options.id });
-      } else if (options.shortName) {
-        unit = await db.units.findFirst({ where: { shortName: options.shortName } });
+        unitData.dockerImages = [
+          { image: dockerImage, displayName: 'Default Image' }
+        ];
+        unitData.defaultDockerImage = dockerImage;
+        unitData.dockerImage = dockerImage;
       }
-      
-      if (!unit) {
-        console.error(chalk.red('Unit not found'));
-        process.exit(1);
-      }
-      
-      if (options.json) {
-        console.log(JSON.stringify(unit, null, 2));
-      } else {
-        console.log(chalk.blue(`=== Unit: ${unit.name} ===`));
-        console.log(chalk.blue(`ID: ${unit.id}`));
-        console.log(chalk.blue(`Short Name: ${unit.shortName}`));
-        console.log(chalk.blue(`Description: ${unit.description}`));
-        console.log(chalk.blue(`Docker Image: ${unit.dockerImage}`));
-        console.log(chalk.blue(`Default Startup Command: ${unit.defaultStartupCommand}`));
-        
-        console.log(chalk.blue('\nEnvironment Variables:'));
-        if (unit.environmentVariables.length === 0) {
-          console.log(chalk.yellow('  No environment variables defined'));
-        } else {
-          unit.environmentVariables.forEach(env => {
-            console.log(chalk.green(`  - ${env.name}`));
-            console.log(`    Description: ${env.description || 'N/A'}`);
-            console.log(`    Default: ${env.defaultValue}`);
-            console.log(`    Required: ${env.required ? 'Yes' : 'No'}`);
-            console.log(`    User Editable: ${env.userEditable ? 'Yes' : 'No'}`);
-            console.log(``);
-          });
+    } else {
+      // For v2 units, just ask for a single Docker image
+      const { dockerImage } = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'dockerImage',
+          message: 'Enter Docker image:',
+          validate: (input) => input.length > 0 ? true : 'Docker image cannot be empty'
         }
-        
-        console.log(chalk.blue('Config Files:'));
-        if (unit.configFiles.length === 0) {
-          console.log(chalk.yellow('  No config files defined'));
-        } else {
-          unit.configFiles.forEach(config => {
-            console.log(chalk.green(`  - ${config.path}`));
-          });
-        }
-        
-        console.log(chalk.blue('\nInstall Script:'));
-        console.log(`  Docker Image: ${unit.installScript.dockerImage}`);
-        console.log(`  Entrypoint: ${unit.installScript.entrypoint}`);
-        console.log(`  Script:\n${unit.installScript.script}`);
-      }
-    } catch (error) {
-      console.error(chalk.red(`Error getting unit: ${error.message}`));
-      process.exit(1);
+      ]);
+      
+      unitData.dockerImage = dockerImage;
     }
-  });
-
-// Create unit
-unitCommand
-  .command('create')
-  .description('Create a new unit')
-  .option('-f, --file <path>', 'JSON file containing unit configuration')
-  .option('-i, --interactive', 'Create unit interactively')
-  .action(async (options) => {
-    try {
-      let unitData;
-      
-      if (options.file) {
-        // Read from file
-        if (!existsSync(options.file)) {
-          console.error(chalk.red(`File not found: ${options.file}`));
-          process.exit(1);
-        }
-        
-        try {
-          const fileContent = readFileSync(options.file, 'utf-8');
-          unitData = JSON.parse(fileContent);
-        } catch (error) {
-          console.error(chalk.red(`Error parsing file: ${error.message}`));
-          process.exit(1);
-        }
-      } else if (options.interactive) {
-        // Interactive mode
-        unitData = await promptUnitDetails();
-      } else {
-        console.error(chalk.yellow('Please specify either --file or --interactive'));
-        process.exit(1);
+    
+    const { defaultStartupCommand } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'defaultStartupCommand',
+        message: 'Enter default startup command:',
+        validate: (input) => input.length > 0 ? true : 'Startup command cannot be empty'
       }
-      
-      // Check if shortName already exists
-      const existing = await db.units.findFirst({
-        where: { shortName: unitData.shortName }
-      });
-      
-      if (existing) {
-        console.error(chalk.red(`Error: A unit with short name '${unitData.shortName}' already exists`));
-        process.exit(1);
+    ]);
+    
+    unitData.defaultStartupCommand = defaultStartupCommand;
+    
+    // Environment variables
+    unitData.environmentVariables = [];
+    
+    const { addEnvVars } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'addEnvVars',
+        message: 'Would you like to add environment variables?',
+        default: true
       }
+    ]);
+    
+    if (addEnvVars) {
+      let addMore = true;
       
-      // Create the unit
-      const unit = await db.units.create(unitData);
-      
-      console.log(chalk.green(`Unit '${unit.name}' created successfully!`));
-      console.log(chalk.green(`ID: ${unit.id}`));
-      console.log(chalk.green(`Short Name: ${unit.shortName}`));
-    } catch (error) {
-      console.error(chalk.red(`Error creating unit: ${error.message}`));
-      process.exit(1);
-    }
-  });
-
-// Delete unit
-unitCommand
-  .command('delete')
-  .description('Delete a unit')
-  .option('-i, --id <id>', 'Unit ID')
-  .option('-s, --short-name <shortName>', 'Unit short name')
-  .option('-f, --force', 'Force deletion without confirmation')
-  .action(async (options) => {
-    try {
-      let unit;
-      
-      if (!options.id && !options.shortName) {
-        const units = await db.units.findMany();
-        
-        if (units.length === 0) {
-          console.error(chalk.red('No units found'));
-          process.exit(1);
-        }
-        
-        const { unitId } = await inquirer.prompt([
+      while (addMore) {
+        const envVar = await inquirer.prompt([
           {
-            type: 'list',
-            name: 'unitId',
-            message: 'Select a unit to delete:',
-            choices: units.map(unit => ({
-              name: `${unit.name} (${unit.shortName})`,
-              value: unit.id
-            }))
-          }
-        ]);
-        
-        unit = await db.units.findUnique({ id: unitId });
-      } else if (options.id) {
-        unit = await db.units.findUnique({ id: options.id });
-      } else if (options.shortName) {
-        unit = await db.units.findFirst({ where: { shortName: options.shortName } });
-      }
-      
-      if (!unit) {
-        console.error(chalk.red('Unit not found'));
-        process.exit(1);
-      }
-      
-      // Check if unit is in use by any servers
-      const servers = await db.servers.findMany({
-        where: { unitId: unit.id }
-      });
-      
-      if (servers.length > 0) {
-        console.error(chalk.red(`Cannot delete unit '${unit.name}' because it is in use by ${servers.length} servers`));
-        process.exit(1);
-      }
-      
-      if (!options.force) {
-        const { confirm } = await inquirer.prompt([
+            type: 'input',
+            name: 'name',
+            message: 'Environment variable name:',
+            validate: (input) => input.length > 0 ? true : 'Name cannot be empty'
+          },
+          {
+            type: 'input',
+            name: 'description',
+            message: 'Description:',
+          },
+          {
+            type: 'input',
+            name: 'defaultValue',
+            message: 'Default value:',
+            validate: (input) => input !== undefined ? true : 'Default value is required'
+          },
           {
             type: 'confirm',
-            name: 'confirm',
-            message: `Are you sure you want to delete unit '${unit.name}'?`,
+            name: 'required',
+            message: 'Is this variable required?',
+            default: false
+          },
+          {
+            type: 'confirm',
+            name: 'userViewable',
+            message: 'Is this variable viewable by users?',
+            default: true
+          },
+          {
+            type: 'confirm',
+            name: 'userEditable',
+            message: 'Is this variable editable by users?',
+            default: false
+          },
+          {
+            type: 'input',
+            name: 'rules',
+            message: 'Validation rules (e.g., required|string|max:20):',
+            default: 'string'
+          }
+        ]);
+        
+        unitData.environmentVariables.push(envVar);
+        
+        const { continueAdding } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'continueAdding',
+            message: 'Add another environment variable?',
             default: false
           }
         ]);
         
-        if (!confirm) {
-          console.log(chalk.yellow('Deletion cancelled'));
-          process.exit(0);
-        }
+        addMore = continueAdding;
       }
-      
-      await db.units.delete({ id: unit.id });
-      console.log(chalk.green(`Unit '${unit.name}' deleted successfully`));
-    } catch (error) {
-      console.error(chalk.red(`Error deleting unit: ${error.message}`));
-      process.exit(1);
     }
-  });
-
-// Export unit
-unitCommand
-  .command('export')
-  .description('Export a unit to JSON')
-  .option('-i, --id <id>', 'Unit ID')
-  .option('-s, --short-name <shortName>', 'Unit short name')
-  .option('-o, --output <path>', 'Output file path')
-  .action(async (options) => {
-    try {
-      let unit;
-      
-      if (!options.id && !options.shortName) {
-        const units = await db.units.findMany();
-        
-        if (units.length === 0) {
-          console.error(chalk.red('No units found'));
-          process.exit(1);
-        }
-        
-        const { unitId } = await inquirer.prompt([
-          {
-            type: 'list',
-            name: 'unitId',
-            message: 'Select a unit to export:',
-            choices: units.map(unit => ({
-              name: `${unit.name} (${unit.shortName})`,
-              value: unit.id
-            }))
-          }
-        ]);
-        
-        unit = await db.units.findUnique({ id: unitId });
-      } else if (options.id) {
-        unit = await db.units.findUnique({ id: options.id });
-      } else if (options.shortName) {
-        unit = await db.units.findFirst({ where: { shortName: options.shortName } });
+    
+    // Config files
+    unitData.configFiles = [];
+    
+    const { addConfigFiles } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'addConfigFiles',
+        message: 'Would you like to add config files?',
+        default: false
       }
+    ]);
+    
+    if (addConfigFiles) {
+      let addMore = true;
       
-      if (!unit) {
-        console.error(chalk.red('Unit not found'));
-        process.exit(1);
-      }
-      
-      // Prepare export data (omitting ID and timestamps)
-      const exportData = {
-        name: unit.name,
-        shortName: unit.shortName,
-        description: unit.description,
-        dockerImage: unit.dockerImage,
-        defaultStartupCommand: unit.defaultStartupCommand,
-        configFiles: unit.configFiles,
-        environmentVariables: unit.environmentVariables,
-        installScript: unit.installScript,
-        startup: unit.startup
-      };
-      
-      // Determine output path
-      const outputPath = options.output || `${unit.shortName}.json`;
-      
-      // Write to file
-      writeFileSync(outputPath, JSON.stringify(exportData, null, 2));
-      
-      console.log(chalk.green(`Unit '${unit.name}' exported to ${outputPath}`));
-    } catch (error) {
-      console.error(chalk.red(`Error exporting unit: ${error.message}`));
-      process.exit(1);
-    }
-  });
-
-// Import unit
-unitCommand
-  .command('import')
-  .description('Import a unit from JSON')
-  .option('-f, --file <path>', 'JSON file containing unit configuration')
-  .action(async (options) => {
-    try {
-      if (!options.file) {
-        // Prompt for file path
-        const { filePath } = await inquirer.prompt([
+      while (addMore) {
+        const configFile = await inquirer.prompt([
           {
             type: 'input',
-            name: 'filePath',
-            message: 'Enter the path to the unit JSON file:',
-            validate: (input) => existsSync(input) ? true : 'File not found'
+            name: 'path',
+            message: 'File path (relative to /home/container):',
+            validate: (input) => input.length > 0 ? true : 'Path cannot be empty'
+          },
+          {
+            type: 'editor',
+            name: 'content',
+            message: 'File content:',
           }
         ]);
         
-        options.file = filePath;
-      }
-      
-      // Read and parse file
-      const fileContent = readFileSync(options.file, 'utf-8');
-      const unitData = JSON.parse(fileContent);
-      
-      // Check if shortName already exists
-      const existing = await db.units.findFirst({
-        where: { shortName: unitData.shortName }
-      });
-      
-      let shortName = unitData.shortName;
-      
-      if (existing) {
-        console.log(chalk.yellow(`A unit with short name '${shortName}' already exists`));
+        unitData.configFiles.push(configFile);
         
-        // Generate a unique shortName by appending a number
-        let counter = 1;
-        while (await db.units.findFirst({ where: { shortName: `${shortName}-${counter}` } })) {
-          counter++;
-        }
-        
-        const { useGenerated } = await inquirer.prompt([
+        const { continueAdding } = await inquirer.prompt([
           {
             type: 'confirm',
-            name: 'useGenerated',
-            message: `Would you like to use '${shortName}-${counter}' as the short name?`,
+            name: 'continueAdding',
+            message: 'Add another config file?',
+            default: false
+          }
+        ]);
+        
+        addMore = continueAdding;
+      }
+    }
+    
+    // Installation script
+    const installScript = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'dockerImage',
+        message: 'Install script Docker image:',
+        default: 'debian:bullseye-slim'
+      },
+      {
+        type: 'input',
+        name: 'entrypoint',
+        message: 'Install script entrypoint:',
+        default: 'bash'
+      },
+      {
+        type: 'editor',
+        name: 'script',
+        message: 'Installation script content:',
+      }
+    ]);
+    
+    unitData.installScript = installScript;
+    
+    // V3: Enhanced startup configuration
+    if (isV3) {
+      const startupConfig = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'userEditable',
+          message: 'Allow users to edit startup command?',
+          default: false
+        },
+        {
+          type: 'input',
+          name: 'readyRegex',
+          message: 'Regex to detect when server is ready (optional):',
+          default: ''
+        },
+        {
+          type: 'input',
+          name: 'stopCommand',
+          message: 'Command to gracefully stop the server (optional):',
+          default: ''
+        }
+      ]);
+      
+      unitData.startup = startupConfig;
+    } else {
+      const { userEditable } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'userEditable',
+          message: 'Allow users to edit startup command?',
+          default: false
+        }
+      ]);
+      
+      unitData.startup = { userEditable };
+    }
+    
+    // V3: Features
+    if (isV3) {
+      unitData.features = [];
+      
+      const { addFeatures } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'addFeatures',
+          message: 'Would you like to add features?',
+          default: false
+        }
+      ]);
+      
+      if (addFeatures) {
+        let addMore = true;
+        
+        while (addMore) {
+          const feature = await promptFeatureDetails();
+          unitData.features.push(feature);
+          
+          const { continueAdding } = await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'continueAdding',
+              message: 'Add another feature?',
+              default: false
+            }
+          ]);
+          
+          addMore = continueAdding;
+        }
+      }
+      
+      // Add EULA feature if it has an EULA environment variable
+      const hasEula = unitData.environmentVariables.some(
+        env => env.name === 'EULA' || env.name === 'MC_EULA' || env.name.toLowerCase().includes('eula')
+      );
+      
+      if (hasEula && !unitData.features.some(f => f.name === 'eula-agreement')) {
+        const { addEulaFeature } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'addEulaFeature',
+            message: 'EULA environment variable detected. Add EULA acceptance feature?',
             default: true
           }
         ]);
         
-        if (useGenerated) {
-          shortName = `${shortName}-${counter}`;
-        } else {
-          const { newShortName } = await inquirer.prompt([
-            {
-              type: 'input',
-              name: 'newShortName',
-              message: 'Enter a new short name:',
-              validate: async (input) => {
-                if (!/^[a-z0-9-]+$/.test(input)) {
-                  return 'Short name must contain only lowercase letters, numbers, and hyphens';
-                }
-                
-                const exists = await db.units.findFirst({ where: { shortName: input } });
-                return exists ? 'Short name already exists' : true;
+        if (addEulaFeature) {
+          unitData.features.push({
+            name: 'eula-agreement',
+            description: 'Minecraft EULA acceptance is required to run the server',
+            type: 'required',
+            uiData: {
+              component: 'checkbox',
+              props: {
+                label: 'I accept the Minecraft End User License Agreement',
+                link: 'https://www.minecraft.net/en-us/eula'
               }
             }
-          ]);
-          
-          shortName = newShortName;
-        }
-      }
-      
-      // Create the unit
-      const unit = await db.units.create({
-        ...unitData,
-        shortName
-      });
-      
-      console.log(chalk.green(`Unit '${unit.name}' imported successfully!`));
-      console.log(chalk.green(`ID: ${unit.id}`));
-      console.log(chalk.green(`Short Name: ${unit.shortName}`));
-    } catch (error) {
-      console.error(chalk.red(`Error importing unit: ${error.message}`));
-      process.exit(1);
-    }
-  });
-
-// Seed units command
-unitCommand
-  .command('seed')
-  .description('Download and import units from GitHub repository')
-  .option('-r, --repo <repo>', 'GitHub repository (default: argon-foss/units)')
-  .option('-b, --branch <branch>', 'Branch name (default: main)')
-  .option('-f, --force', 'Force overwrite existing units')
-  .action(async (options) => {
-    const repo = options.repo || 'argon-foss/units';
-    const branch = options.branch || 'main';
-    const baseUrl = `https://raw.githubusercontent.com/${repo}/${branch}`;
-    
-    console.log(chalk.blue(`Fetching units from ${repo} (${branch})...`));
-    
-    try {
-      // Create a temp directory for downloads
-      const tempDir = join(PROJECT_ROOT, 'temp_units');
-      if (existsSync(tempDir)) {
-        await rm(tempDir, { recursive: true, force: true });
-      }
-      await mkdir(tempDir, { recursive: true });
-      
-      // Download master.yaml file
-      console.log(chalk.blue(`Downloading master.yaml...`));
-      const masterYamlUrl = `${baseUrl}/master.yaml`;
-      
-      let masterYaml;
-      try {
-        const response = await fetch(masterYamlUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to download master.yaml: ${response.statusText}`);
-        }
-        masterYaml = await response.text();
-      } catch (error) {
-        console.error(chalk.red(`Error downloading master.yaml: ${error.message}`));
-        process.exit(1);
-      }
-      
-      // Parse YAML
-      const yaml = require('js-yaml');
-      let masterConfig;
-      try {
-        masterConfig = yaml.load(masterYaml);
-      } catch (error) {
-        console.error(chalk.red(`Error parsing master.yaml: ${error.message}`));
-        process.exit(1);
-      }
-      
-      if (!masterConfig.images || !Array.isArray(masterConfig.images)) {
-        console.error(chalk.red(`Invalid master.yaml format: 'images' array not found`));
-        process.exit(1);
-      }
-      
-      // Process each image
-      const totalImages = masterConfig.images.length;
-      console.log(chalk.blue(`Found ${totalImages} units to import`));
-      
-      let successCount = 0;
-      let skipCount = 0;
-      let errorCount = 0;
-      
-      for (let i = 0; i < totalImages; i++) {
-        const image = masterConfig.images[i];
-        console.log(chalk.blue(`Processing [${i+1}/${totalImages}] ${image.name}...`));
-        
-        // Download unit JSON file
-        const jsonPath = image.src;
-        const jsonUrl = `${baseUrl}/${jsonPath}`;
-        
-        try {
-          // Download JSON
-          const response = await fetch(jsonUrl);
-          if (!response.ok) {
-            throw new Error(`Failed to download ${jsonPath}: ${response.statusText}`);
-          }
-          
-          const unitJson = await response.text();
-          const unitData = JSON.parse(unitJson);
-          
-          // Check if unit already exists
-          const existingUnit = await db.units.findFirst({
-            where: { shortName: unitData.shortName }
           });
-          
-          if (existingUnit && !options.force) {
-            console.log(chalk.yellow(`Unit '${unitData.name}' (${unitData.shortName}) already exists, skipping`));
-            skipCount++;
-            continue;
-          }
-          
-          if (existingUnit && options.force) {
-            // Update existing unit
-            console.log(chalk.yellow(`Updating existing unit '${unitData.name}' (${unitData.shortName})...`));
-            await db.units.update({ id: existingUnit.id }, unitData);
-            console.log(chalk.green(`Unit '${unitData.name}' updated successfully`));
-          } else {
-            // Create new unit
-            const newUnit = await db.units.create(unitData);
-            console.log(chalk.green(`Unit '${newUnit.name}' imported successfully`));
-          }
-          
-          successCount++;
-        } catch (error) {
-          console.error(chalk.red(`Error processing ${image.name}: ${error.message}`));
-          errorCount++;
         }
       }
       
-      // Clean up temp directory
-      await rm(tempDir, { recursive: true, force: true });
+      // V3: Meta information
+      const metaInfo = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'author',
+          message: 'Author:',
+          default: ''
+        },
+        {
+          type: 'input',
+          name: 'website',
+          message: 'Website URL:',
+          default: ''
+        },
+        {
+          type: 'input',
+          name: 'supportUrl',
+          message: 'Support URL:',
+          default: ''
+        }
+      ]);
       
-      // Print summary
-      console.log(chalk.blue(`=== Import Summary ===`));
-      console.log(chalk.green(`Successfully imported/updated: ${successCount}`));
-      console.log(chalk.yellow(`Skipped: ${skipCount}`));
-      console.log(chalk.red(`Errors: ${errorCount}`));
-      
-      if (errorCount > 0) {
-        process.exit(1);
-      }
-    } catch (error) {
-      console.error(chalk.red(`Error seeding units: ${error.message}`));
-      process.exit(1);
+      unitData.meta = {
+        version: 'argon/unit:v3',
+        ...metaInfo
+      };
     }
-  });
+    
+    return unitData;
+  }
+  
+  // Helper function to prompt for Docker image details
+  async function promptDockerImageDetails() {
+    const image = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'image',
+        message: 'Docker image (e.g., ghcr.io/argon-foss/images:java_21):',
+        validate: (input) => input.length > 0 ? true : 'Docker image cannot be empty'
+      },
+      {
+        type: 'input',
+        name: 'displayName',
+        message: 'Display name (e.g., Java 21):',
+        validate: (input) => input.length > 0 ? true : 'Display name cannot be empty',
+        default: (answers) => {
+          // Try to generate a display name from the image tag
+          const parts = answers.image.split(':');
+          if (parts.length > 1) {
+            return parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
+          }
+          return 'Default Image';
+        }
+      }
+    ]);
+    
+    return image;
+  }
+  
+  // Helper function to prompt for feature details
+  async function promptFeatureDetails() {
+    const feature: any = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'name',
+        message: 'Feature name (used as identifier, e.g., eula-agreement):',
+        validate: (input) => {
+          if (input.length === 0) return 'Name cannot be empty';
+          if (!/^[a-z0-9-]+$/.test(input)) {
+            return 'Name must contain only lowercase letters, numbers, and hyphens';
+          }
+          return true;
+        }
+      },
+      {
+        type: 'input',
+        name: 'description',
+        message: 'Description:',
+        validate: (input) => input.length > 0 ? true : 'Description cannot be empty'
+      },
+      {
+        type: 'input',
+        name: 'iconPath',
+        message: 'Icon path (optional, e.g., /assets/icons/document.svg):',
+        default: ''
+      },
+      {
+        type: 'list',
+        name: 'type',
+        message: 'Feature type:',
+        choices: [
+          { name: 'Required - User must configure this feature', value: 'required' },
+          { name: 'Optional - User can choose to use this feature', value: 'optional' }
+        ],
+        default: 'optional'
+      },
+      {
+        type: 'list',
+        name: 'uiComponent',
+        message: 'UI component:',
+        choices: [
+          { name: 'Checkbox', value: 'checkbox' },
+          { name: 'Select (Dropdown)', value: 'select' },
+          { name: 'None', value: 'none' }
+        ]
+      }
+    ]);
+    
+    // Skip UI data if 'none' is selected
+    if (feature.uiComponent === 'none') {
+      delete feature.uiComponent;
+      return feature;
+    }
+    
+    feature.uiData = {
+      component: feature.uiComponent,
+      props: {}
+    };
+    
+    delete feature.uiComponent;
+    
+    // Component-specific properties
+    if (feature.uiData.component === 'checkbox') {
+      const checkboxProps = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'label',
+          message: 'Checkbox label:',
+          validate: (input) => input.length > 0 ? true : 'Label cannot be empty'
+        },
+        {
+          type: 'input',
+          name: 'link',
+          message: 'Link URL (optional):',
+          default: ''
+        }
+      ]);
+      
+      feature.uiData.props = checkboxProps;
+    } else if (feature.uiData.component === 'select') {
+      const selectProps = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'label',
+          message: 'Select label:',
+          validate: (input) => input.length > 0 ? true : 'Label cannot be empty'
+        }
+      ]);
+      
+      feature.uiData.props = {
+        ...selectProps,
+        options: []
+      };
+      
+      // Add options
+      let addMoreOptions = true;
+      while (addMoreOptions) {
+        const option = await inquirer.prompt([
+          {
+            type: 'input',
+            name: 'value',
+            message: 'Option value:',
+            validate: (input) => input.length > 0 ? true : 'Value cannot be empty'
+          },
+          {
+            type: 'input',
+            name: 'label',
+            message: 'Option label:',
+            validate: (input) => input.length > 0 ? true : 'Label cannot be empty'
+          }
+        ]);
+        
+        feature.uiData.props.options.push(option);
+        
+        const { continueAdding } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'continueAdding',
+            message: 'Add another option?',
+            default: false
+          }
+        ]);
+        
+        addMoreOptions = continueAdding;
+      }
+    }
+    
+    return feature;
+  }
 
 // =========== CARGO COMMANDS ===========
 // Cargo command group
@@ -2477,580 +3480,6 @@ async function promptUnitDetails() {
   
   return unitData;
 }
-
-// =========== DEPLOY COMMAND ===========
-// Deploy Command
-program
-  .command('deploy')
-  .description('Deploy Argon with UI')
-  .option('-f, --force', 'Skip confirmations')
-  .option('-l, --local', 'Force local deployment')
-  .option('-d, --domain <domain>', 'Specify domain for production deployment')
-  .option('-s, --ssl-path <path>', 'Path to SSL certificates')
-  .option('-p, --port <port>', 'API port (default: 3000)')
-  .option('-w, --web-port <port>', 'Web server port for local deployment (default: 3001)')
-  .option('-c, --config <path>', 'Path to saved configuration')
-  .action(async (options) => {
-    // Load config if provided
-    let config: any = {};
-    const configDir = join(PROJECT_ROOT, 'src/cli');
-    const defaultConfigPath = join(configDir, 'deploy.json');
-    const configPath = options.config || defaultConfigPath;
-    
-    console.log(configPath)
-    if (existsSync(configPath)) {
-      try {
-        config = JSON.parse(readFileSync(configPath, 'utf-8'));
-        console.log(chalk.blue(`Loaded configuration from ${configPath}`));
-      } catch (error) {
-        console.error(chalk.yellow(`Failed to load config from ${configPath}: ${error.message}`));
-      }
-    }
-    
-    // Set defaults from config
-    options = {
-      ...config,
-      ...options
-    };
-    
-    // Find argon-ui
-    const expectedUIPath = resolve(PROJECT_ROOT, '..', 'argon-ui');
-    let uiPath = expectedUIPath;
-    
-    // Check if argon-ui exists
-    if (!options.force && !existsSync(uiPath)) {
-      const { confirm } = await inquirer.prompt([
-        {
-          type: 'confirm',
-          name: 'confirm',
-          message: `Please confirm that 'argon-ui' is located in the preceding folder to 'argon-core' (the current directory)`,
-          default: true
-        }
-      ]);
-      
-      if (!confirm) {
-        const { customPath } = await inquirer.prompt([
-          {
-            type: 'input',
-            name: 'customPath',
-            message: 'Enter the path to argon-ui:',
-            validate: (input) => existsSync(input) ? true : 'Path does not exist'
-          }
-        ]);
-        uiPath = customPath;
-      }
-    }
-    
-    console.log(chalk.blue(`Looking for 'argon-ui'...`));
-    
-    if (!existsSync(uiPath)) {
-      console.error(chalk.red(`argon-ui not found at ${uiPath}`));
-      process.exit(1);
-    }
-    
-    console.log(chalk.green(`Found argon-ui at ${uiPath}!`));
-    
-    // Install dependencies
-    console.log(chalk.blue(`Installing modules (bun install)...`));
-    const installResult = spawnSync('bun', ['install'], { 
-      cwd: uiPath,
-      stdio: 'inherit'
-    });
-    
-    if (installResult.status !== 0) {
-      console.error(chalk.red(`Failed to install dependencies in argon-ui`));
-      process.exit(1);
-    }
-    
-    // Determine deployment type
-    let deploymentType = options.local ? 'local' : (options.domain ? 'domain' : null);
-    
-    if (!deploymentType && !options.force) {
-      const { deployment } = await inquirer.prompt([
-        {
-          type: 'list',
-          name: 'deployment',
-          message: 'Do you have a domain or would you like to run Argon locally?',
-          choices: [
-            { name: 'Run locally', value: 'local' },
-            { name: 'Deploy with domain', value: 'domain' }
-          ]
-        }
-      ]);
-      
-      deploymentType = deployment;
-    }
-    
-    // Set API port
-    const apiPort = options.port || config.port || 3000;
-    
-    // Configure based on deployment type
-    let apiUrl;
-    let sslPath;
-    let webPort;
-    
-    if (deploymentType === 'local') {
-      console.log(chalk.blue(`Ok, we'll run the API on port ${apiPort} as per defaults`));
-      apiUrl = `http://localhost:${apiPort}`;
-      webPort = options.webPort || config.webPort || 3001;
-    } else {
-      let domain = options.domain || config.domain;
-      
-      if (!domain && !options.force) {
-        const { domainAnswer } = await inquirer.prompt([
-          {
-            type: 'input',
-            name: 'domainAnswer',
-            message: 'Please enter the domain (e.g., panel.example.com):',
-            validate: (input) => input.length > 0 ? true : 'Domain cannot be empty'
-          }
-        ]);
-        
-        domain = domainAnswer;
-      }
-      
-      // Check SSL certificates
-      let hasSSL = options.sslPath || config.sslPath;
-      
-      if (!hasSSL && !options.force) {
-        const { sslConfirm } = await inquirer.prompt([
-          {
-            type: 'confirm',
-            name: 'sslConfirm',
-            message: 'Have you generated a Let\'s Encrypt SSL certificate for your domain?',
-            default: false
-          }
-        ]);
-        
-        if (sslConfirm) {
-          const { sslPathAnswer } = await inquirer.prompt([
-            {
-              type: 'input',
-              name: 'sslPathAnswer',
-              message: 'Enter the path to your SSL certificates directory:',
-              validate: (input) => existsSync(input) ? true : 'Path does not exist'
-            }
-          ]);
-          
-          sslPath = sslPathAnswer;
-        } else {
-          console.log(chalk.yellow(`Warning: Proceeding without SSL certificates. Your deployment will not be secure.`));
-        }
-      } else {
-        sslPath = options.sslPath || config.sslPath;
-        
-        if (sslPath) {
-          console.log(chalk.blue(`Checking if SSL certificates exist at ${sslPath}...`));
-          
-          if (!existsSync(sslPath)) {
-            console.error(chalk.red(`SSL certificates directory not found at ${sslPath}`));
-            process.exit(1);
-          }
-          
-          // Check for key and cert files
-          const hasKey = existsSync(join(sslPath, 'privkey.pem'));
-          const hasCert = existsSync(join(sslPath, 'fullchain.pem'));
-          
-          if (!hasKey || !hasCert) {
-            console.error(chalk.red(`SSL certificates incomplete. Could not find privkey.pem and/or fullchain.pem in ${sslPath}`));
-            process.exit(1);
-          }
-          
-          console.log(chalk.green(`SSL certificates found!`));
-        }
-      }
-      
-      apiUrl = `https://${domain}`;
-      console.log(chalk.blue(`Ok, we'll run the API on port ${apiPort}, but with the public domain as the API URL`));
-    }
-    
-    // Write .env file for argon-ui
-    console.log(chalk.blue(`Writing \`argon-ui\` .env file with "API_URL=${apiUrl}"`));
-    
-    try {
-      writeFileSync(join(uiPath, '.env'), `API_URL=${apiUrl}\n`);
-    } catch (error) {
-      console.error(chalk.red(`Failed to write .env file: ${error.message}`));
-      process.exit(1);
-    }
-    
-    // Build for production
-    console.log(chalk.blue(`Building for production...`));
-    const buildResult = spawnSync('bun', ['run', 'build'], {
-      cwd: uiPath,
-      stdio: 'inherit'
-    });
-    
-    if (buildResult.status !== 0) {
-      console.error(chalk.red(`Build failed. Please check the build output for errors.`));
-      process.exit(1);
-    }
-    
-    // Create _dist directory in argon-core
-    const distDir = join(PROJECT_ROOT, '_dist');
-    
-    if (existsSync(distDir)) {
-      console.log(chalk.blue(`Cleaning existing _dist directory...`));
-      await rm(distDir, { recursive: true, force: true });
-    }
-    
-    try {
-      await mkdir(distDir, { recursive: true });
-    } catch (error) {
-      console.error(chalk.red(`Failed to create _dist directory: ${error.message}`));
-      process.exit(1);
-    }
-    
-    // Copy files from argon-ui/dist to argon-core/_dist
-    console.log(chalk.blue(`Copying \`dist\` files from \`argon-ui\` to \`argon-core/_dist\`...`));
-    
-    const uiDistPath = join(uiPath, 'dist');
-    
-    if (!existsSync(uiDistPath)) {
-      console.error(chalk.red(`Build output not found at ${uiDistPath}`));
-      process.exit(1);
-    }
-    
-    const distFiles = listFilesRecursively(uiDistPath);
-    
-    for (const file of distFiles) {
-      const relativePath = file.replace(uiDistPath, '');
-      const targetPath = join(distDir, relativePath);
-      const targetDir = dirname(targetPath);
-      
-      if (!existsSync(targetDir)) {
-        await mkdir(targetDir, { recursive: true });
-      }
-      
-      await Bun.write(targetPath, Bun.file(file));
-    }
-    
-    console.log(chalk.green(`Done copying files!`));
-    
-    // Save configuration if requested
-    const saveConfig = async () => {
-      const config = {
-        port: apiPort,
-        webPort,
-        domain: deploymentType === 'domain' ? options.domain : undefined,
-        sslPath,
-        uiPath
-      };
-      
-      if (!existsSync(configDir)) {
-        await mkdir(configDir, { recursive: true });
-      }
-      
-      writeFileSync(configPath, JSON.stringify(config, null, 2));
-      console.log(chalk.green(`Configuration saved to ${configPath}`));
-    };
-    
-    if (!options.force) {
-      const { saveConfigConfirm } = await inquirer.prompt([
-        {
-          type: 'confirm',
-          name: 'saveConfigConfirm',
-          message: `Would you like to save these settings (${configPath})?`,
-          default: true
-        }
-      ]);
-      
-      if (saveConfigConfirm) {
-        await saveConfig();
-      }
-    } else {
-      await saveConfig();
-    }
-    
-    // Start servers
-    console.log(chalk.blue(`Starting servers...`));
-    
-    // Start API server
-    console.log(chalk.blue(`Starting API server on port ${apiPort}...`));
-    
-    const apiProcess = spawn('bun', ['run', 'start'], {
-      cwd: PROJECT_ROOT,
-      stdio: 'inherit',
-      env: {
-        ...process.env,
-        PORT: apiPort.toString()
-      }
-    });
-    
-    // Start web server with proxy
-    if (deploymentType === 'local') {
-      console.log(chalk.blue(`Starting web server with API proxy on port ${webPort}...`));
-      
-      // Create a web server with API proxy using Bun
-      const server = Bun.serve({
-        port: webPort,
-        async fetch(req) {
-          const url = new URL(req.url);
-          const path = url.pathname;
-          
-          // Proxy API requests to the API server
-          if (path.startsWith('/api/')) {
-            // Create a new request to forward to the API server
-            const apiUrl = new URL(path, `http://localhost:${apiPort}`);
-            
-            // Copy search params
-            url.searchParams.forEach((value, key) => {
-              apiUrl.searchParams.append(key, value);
-            });
-            
-            // Forward the request to the API server
-            try {
-              const apiResponse = await fetch(apiUrl, {
-                method: req.method,
-                headers: req.headers,
-                body: req.body
-              });
-              
-              // Create a new response with the API response
-              return new Response(apiResponse.body, {
-                status: apiResponse.status,
-                statusText: apiResponse.statusText,
-                headers: apiResponse.headers
-              });
-            } catch (error) {
-              console.error(chalk.red(`Error proxying to API: ${error.message}`));
-              return new Response(`API server error: ${error.message}`, { status: 502 });
-            }
-          }
-          
-          // Serve static files for non-API requests
-          let filePath = path;
-          
-          // Default to index.html for root or client-side routing paths without file extensions
-          if (filePath === '/' || (!filePath.includes('.') && !filePath.endsWith('/'))) {
-            filePath = '/index.html';
-          }
-          
-          // Try to serve the file from _dist
-          const fullPath = join(distDir, filePath);
-          
-          if (existsSync(fullPath) && statSync(fullPath).isFile()) {
-            return new Response(Bun.file(fullPath));
-          }
-          
-          // If we're here and the path doesn't have an extension, it might be a client-side route
-          // Serve index.html for client-side routing
-          if (!path.includes('.')) {
-            return new Response(Bun.file(join(distDir, 'index.html')));
-          }
-          
-          // 404 if file not found
-          return new Response('Not Found', { status: 404 });
-        },
-      });
-      
-      console.log(chalk.green(`Webserver online on port ${webPort}`));
-      console.log(chalk.green(`API proxy is set up to forward /api/* requests to http://localhost:${apiPort}`));
-      console.log(chalk.green(`You can access Argon at http://localhost:${webPort}`));
-    } else {
-      // Production deployment with domain
-      console.log(chalk.blue(`Setting up production server with API proxy...`));
-      
-      let server;
-      
-      // Check if we have SSL
-      if (sslPath) {
-        // SSL configuration for HTTPS
-        try {
-          const keyFile = join(sslPath, 'privkey.pem');
-          const certFile = join(sslPath, 'fullchain.pem');
-          
-          // Read SSL files
-          const key = readFileSync(keyFile, 'utf-8');
-          const cert = readFileSync(certFile, 'utf-8');
-          
-          // Create HTTPS server
-          server = Bun.serve({
-            port: 443,
-            tls: {
-              key,
-              cert
-            },
-            async fetch(req) {
-              const url = new URL(req.url);
-              const path = url.pathname;
-              
-              // Proxy API requests to the API server
-              if (path.startsWith('/api/')) {
-                // Create a new request to forward to the API server
-                const apiUrl = new URL(path, `http://localhost:${apiPort}`);
-                
-                // Copy search params
-                url.searchParams.forEach((value, key) => {
-                  apiUrl.searchParams.append(key, value);
-                });
-                
-                // Forward the request to the API server
-                try {
-                  const apiResponse = await fetch(apiUrl, {
-                    method: req.method,
-                    headers: req.headers,
-                    body: req.body
-                  });
-                  
-                  // Create a new response with the API response
-                  return new Response(apiResponse.body, {
-                    status: apiResponse.status,
-                    statusText: apiResponse.statusText,
-                    headers: apiResponse.headers
-                  });
-                } catch (error) {
-                  console.error(chalk.red(`Error proxying to API: ${error.message}`));
-                  return new Response(`API server error: ${error.message}`, { status: 502 });
-                }
-              }
-              
-              // Serve static files for non-API requests
-              let filePath = path;
-              
-              // Default to index.html for root or client-side routing paths
-              if (filePath === '/' || (!filePath.includes('.') && !filePath.endsWith('/'))) {
-                filePath = '/index.html';
-              }
-              
-              // Try to serve the file from _dist
-              const fullPath = join(distDir, filePath);
-              
-              if (existsSync(fullPath) && statSync(fullPath).isFile()) {
-                return new Response(Bun.file(fullPath));
-              }
-              
-              // If we're here and the path doesn't have an extension, it might be a client-side route
-              // Serve index.html for client-side routing
-              if (!path.includes('.')) {
-                return new Response(Bun.file(join(distDir, 'index.html')));
-              }
-              
-              // 404 if file not found
-              return new Response('Not Found', { status: 404 });
-            },
-          });
-          
-          // Also set up HTTP to HTTPS redirect on port 80
-          Bun.serve({
-            port: 80,
-            fetch(req) {
-              const url = new URL(req.url);
-              url.protocol = 'https:';
-              url.port = '443';
-              
-              return new Response(null, {
-                status: 301,
-                headers: {
-                  'Location': url.toString()
-                }
-              });
-            }
-          });
-          
-          console.log(chalk.green(`HTTPS server with SSL running on port 443`));
-          console.log(chalk.green(`HTTP to HTTPS redirect running on port 80`));
-        } catch (error) {
-          console.error(chalk.red(`Failed to start HTTPS server: ${error.message}`));
-          console.log(chalk.yellow(`Falling back to HTTP server...`));
-          
-          // Fall back to HTTP
-          setupHttpServer();
-        }
-      } else {
-        // HTTP only setup
-        setupHttpServer();
-      }
-      
-      function setupHttpServer() {
-        server = Bun.serve({
-          port: 80,
-          async fetch(req) {
-            const url = new URL(req.url);
-            const path = url.pathname;
-            
-            // Proxy API requests to the API server
-            if (path.startsWith('/api/')) {
-              // Create a new request to forward to the API server
-              const apiUrl = new URL(path, `http://localhost:${apiPort}`);
-              
-              // Copy search params
-              url.searchParams.forEach((value, key) => {
-                apiUrl.searchParams.append(key, value);
-              });
-              
-              // Forward the request to the API server
-              try {
-                const apiResponse = await fetch(apiUrl, {
-                  method: req.method,
-                  headers: req.headers,
-                  body: req.body
-                });
-                
-                // Create a new response with the API response
-                return new Response(apiResponse.body, {
-                  status: apiResponse.status,
-                  statusText: apiResponse.statusText,
-                  headers: apiResponse.headers
-                });
-              } catch (error) {
-                console.error(chalk.red(`Error proxying to API: ${error.message}`));
-                return new Response(`API server error: ${error.message}`, { status: 502 });
-              }
-            }
-            
-            // Serve static files for non-API requests
-            let filePath = path;
-            
-            // Default to index.html for root or client-side routing paths
-            if (filePath === '/' || (!filePath.includes('.') && !filePath.endsWith('/'))) {
-              filePath = '/index.html';
-            }
-            
-            // Try to serve the file from _dist
-            const fullPath = join(distDir, filePath);
-            
-            if (existsSync(fullPath) && statSync(fullPath).isFile()) {
-              return new Response(Bun.file(fullPath));
-            }
-            
-            // If we're here and the path doesn't have an extension, it might be a client-side route
-            // Serve index.html for client-side routing
-            if (!path.includes('.')) {
-              return new Response(Bun.file(join(distDir, 'index.html')));
-            }
-            
-            // 404 if file not found
-            return new Response('Not Found', { status: 404 });
-          },
-        });
-        
-        console.log(chalk.green(`HTTP server running on port 80`));
-      }
-      
-      console.log(chalk.green(`API proxy is set up to forward /api/* requests to http://localhost:${apiPort}`));
-      console.log(chalk.green(`You can access Argon at ${apiUrl.replace('/api', '')}`));
-    }
-    
-    // Handle graceful shutdown
-    const cleanup = () => {
-      console.log(chalk.blue('\nShutting down servers...'));
-      
-      // Kill the API process
-      if (apiProcess && !apiProcess.killed) {
-        apiProcess.kill();
-      }
-      
-      process.exit(0);
-    };
-    
-    // Listen for termination signals
-    process.on('SIGINT', cleanup);
-    process.on('SIGTERM', cleanup);
-    
-    // Keep the process running
-    await new Promise(() => {});
-  });
 
 // Helper function to format permissions
 function formatPermissions(permissionBitmap: number): string {

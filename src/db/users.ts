@@ -14,7 +14,7 @@ const parseUserRow = (row: any): User => ({
 });
 
 export function createUsersRepository({ db }: DatabaseContext) {
-  return {
+  const repository = {
     findMany: async (options?: QueryOptions<User>): Promise<User[]> => {
       const { clause: whereClause, params: whereParams } = buildWhereClause('users', options?.where);
       const orderByClause = buildOrderByClause('users', options?.orderBy);
@@ -114,8 +114,11 @@ export function createUsersRepository({ db }: DatabaseContext) {
     },
 
     updateUser: async (where: { id: string }, data: Partial<User>): Promise<User> => {
-      const current = await this.findUnique(where);
-      if (!current) throw new Error('User not found');
+      // Direct database query approach - avoids the 'this' binding issue
+      const row = db.prepare('SELECT * FROM users WHERE id = ?').get(where.id) as any;
+      if (!row) throw new Error('User not found');
+      
+      const current = parseUserRow(row);
 
       const updated = {
         ...current,
@@ -156,4 +159,6 @@ export function createUsersRepository({ db }: DatabaseContext) {
       }
     }
   };
+
+  return repository;
 }

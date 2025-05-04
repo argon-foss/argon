@@ -1,9 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRightIcon, TrashIcon, PencilIcon, ArrowLeftIcon, PackageIcon, PlusIcon } from 'lucide-react';
+import { ChevronRightIcon, TrashIcon, PencilIcon, ArrowLeftIcon, PackageIcon, PlusIcon, InfoIcon, TagIcon } from 'lucide-react';
 import { z } from 'zod';
 import AdminBar from '../../components/AdminBar';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { saveAs } from 'file-saver';
+
+// V3: Schema for Docker images
+const dockerImageSchema = z.object({
+  image: z.string().min(1),
+  displayName: z.string().min(1)
+});
+
+// V3: Schema for unit features
+const unitFeatureSchema = z.object({
+  name: z.string().min(1),
+  description: z.string(),
+  iconPath: z.string().optional(),
+  type: z.enum(['required', 'optional']),
+  uiData: z.object({
+    component: z.string(),
+    props: z.record(z.any()).optional()
+  }).optional()
+});
+
+// V3: Schema for unit metadata
+const unitMetaSchema = z.object({
+  version: z.string().default('argon/unit:v3'),
+  author: z.string().optional(),
+  website: z.string().optional(),
+  supportUrl: z.string().optional()
+});
 
 // Schemas matching backend validation
 const environmentVariableSchema = z.object({
@@ -27,19 +53,34 @@ const installScriptSchema = z.object({
   script: z.string()
 });
 
+// V3: Updated unit schema
 const unitSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1).max(100),
   shortName: z.string().min(1).max(20).regex(/^[a-z0-9-]+$/),
   description: z.string(),
+  // V3: Multiple docker images with display names
+  dockerImages: z.array(dockerImageSchema).min(1),
+  // V3: Default image to use
+  defaultDockerImage: z.string(),
+  // Legacy field kept for backward compatibility
   dockerImage: z.string(),
   defaultStartupCommand: z.string(),
   configFiles: z.array(configFileSchema).default([]),
   environmentVariables: z.array(environmentVariableSchema).default([]),
   installScript: installScriptSchema,
+  // V3: Enhanced startup configuration
   startup: z.object({
-    userEditable: z.boolean().default(false)
+    userEditable: z.boolean().default(false),
+    readyRegex: z.string().optional(),
+    stopCommand: z.string().optional()
   }).default({}),
+  // V3: Features section
+  features: z.array(unitFeatureSchema).default([]),
+  // V3: Meta information
+  meta: unitMetaSchema.default({
+    version: 'argon/unit:v3'
+  }),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional()
 });
@@ -60,6 +101,409 @@ const containerSchema = z.object({
 type Unit = z.infer<typeof unitSchema>;
 type Container = z.infer<typeof containerSchema>;
 type View = 'list' | 'create' | 'view' | 'edit';
+
+// V3: Docker Images Form Component
+const DockerImagesForm: React.FC<{
+  images: Unit['dockerImages'],
+  defaultImage: string,
+  onChange: (images: Unit['dockerImages'], defaultImage: string) => void
+}> = ({ images, defaultImage, onChange }) => {
+  const addImage = () => {
+    const newImages = [...images, {
+      image: '',
+      displayName: ''
+    }];
+    onChange(newImages, defaultImage || (newImages.length > 0 ? newImages[0].image : ''));
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = images.filter((_, i) => i !== index);
+    let newDefaultImage = defaultImage;
+    
+    // If we're removing the default image, set a new default
+    if (newImages.length > 0 && !newImages.some(img => img.image === defaultImage)) {
+      newDefaultImage = newImages[0].image;
+    }
+    
+    onChange(newImages, newDefaultImage);
+  };
+
+  const updateImage = (index: number, field: keyof typeof images[0], value: string) => {
+    const newImages = images.map((img, i) => i === index ? { ...img, [field]: value } : img);
+    
+    // If updating the image value of the default, update the default too
+    let newDefaultImage = defaultImage;
+    if (field === 'image' && images[index].image === defaultImage) {
+      newDefaultImage = value;
+    }
+    
+    onChange(newImages, newDefaultImage);
+  };
+
+  const setAsDefault = (image: string) => {
+    onChange(images, image);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <label className="block text-xs font-medium text-gray-700">Docker Images</label>
+        <button
+          type="button"
+          onClick={addImage}
+          className="px-2 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+        >
+          Add Image
+        </button>
+      </div>
+
+      {images.map((image, index) => (
+        <div key={index} className="border border-gray-200 rounded-md p-3 space-y-3">
+          <div className="flex justify-between items-start">
+            <div className="grow space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={image.image}
+                  onChange={(e) => updateImage(index, 'image', e.target.value)}
+                  className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+                  placeholder="Docker Image Path (e.g., itzg/minecraft-server:java17)"
+                />
+                <input
+                  type="text"
+                  value={image.displayName}
+                  onChange={(e) => updateImage(index, 'displayName', e.target.value)}
+                  className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+                  placeholder="Display Name (e.g., Java 17)"
+                />
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setAsDefault(image.image)}
+                  className={`px-2 py-1 text-xs font-medium rounded-md ${
+                    defaultImage === image.image 
+                      ? 'bg-green-50 text-green-600 border border-green-200' 
+                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {defaultImage === image.image ? 'Default Image' : 'Set as Default'}
+                </button>
+              </div>
+            </div>
+            
+            <button
+              type="button"
+              onClick={() => removeImage(index)}
+              className="ml-2 p-1 text-gray-400 hover:text-red-500"
+              disabled={images.length <= 1} // Cannot remove the last image
+            >
+              <TrashIcon className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {images.length === 0 && (
+        <div className="text-center py-4 border border-gray-200 border-dashed rounded-md">
+          <p className="text-xs text-gray-500">Add at least one Docker image</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// V3: Features Form Component
+const FeaturesForm: React.FC<{
+  features: Unit['features'],
+  onChange: (features: Unit['features']) => void
+}> = ({ features, onChange }) => {
+  const addFeature = () => {
+    onChange([...features, {
+      name: '',
+      description: '',
+      type: 'optional',
+      uiData: {
+        component: 'checkbox',
+        props: {}
+      }
+    }]);
+  };
+
+  const removeFeature = (index: number) => {
+    onChange(features.filter((_, i) => i !== index));
+  };
+
+  const updateFeature = (index: number, field: string, value: any) => {
+    onChange(features.map((f, i) => {
+      if (i !== index) return f;
+      
+      // Handle nested fields
+      if (field.includes('.')) {
+        const [parent, child] = field.split('.');
+        return {
+          ...f,
+          [parent]: {
+            ...(f[parent as keyof typeof f] as Record<string, any>),
+            [child]: value
+          }
+        };
+      }
+      
+      return { ...f, [field]: value };
+    }));
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <label className="block text-xs font-medium text-gray-700">Features</label>
+        <button
+          type="button"
+          onClick={addFeature}
+          className="px-2 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+        >
+          Add Feature
+        </button>
+      </div>
+
+      {features.map((feature, index) => (
+        <div key={index} className="border border-gray-200 rounded-md p-3 space-y-3">
+          <div className="flex justify-between items-start">
+            <div className="grow space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={feature.name}
+                  onChange={(e) => updateFeature(index, 'name', e.target.value)}
+                  className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+                  placeholder="Feature Name (e.g., eula-agreement)"
+                />
+                <select
+                  value={feature.type}
+                  onChange={(e) => updateFeature(index, 'type', e.target.value)}
+                  className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+                >
+                  <option value="required">Required</option>
+                  <option value="optional">Optional</option>
+                </select>
+              </div>
+              
+              <input
+                type="text"
+                value={feature.description || ''}
+                onChange={(e) => updateFeature(index, 'description', e.target.value)}
+                className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+                placeholder="Description (e.g., Accept the Minecraft EULA)"
+              />
+              
+              <input
+                type="text"
+                value={feature.iconPath || ''}
+                onChange={(e) => updateFeature(index, 'iconPath', e.target.value)}
+                className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+                placeholder="Icon Path (optional, e.g., /assets/icons/document.svg)"
+              />
+              
+              {feature.uiData && (
+                <>
+                  <div className="p-3 bg-gray-50 rounded-md">
+                    <div className="text-xs font-medium text-gray-700 mb-2">UI Component Configuration</div>
+                    
+                    <select
+                      value={feature.uiData.component}
+                      onChange={(e) => updateFeature(index, 'uiData.component', e.target.value)}
+                      className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md mb-2"
+                    >
+                      <option value="checkbox">Checkbox</option>
+                      <option value="select">Select (Dropdown)</option>
+                    </select>
+                    
+                    {feature.uiData.component === 'checkbox' && (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={feature.uiData.props?.label || ''}
+                          onChange={(e) => updateFeature(index, 'uiData.props', { 
+                            ...feature.uiData.props, 
+                            label: e.target.value 
+                          })}
+                          className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+                          placeholder="Checkbox Label (e.g., I accept the EULA)"
+                        />
+                        <input
+                          type="text"
+                          value={feature.uiData.props?.link || ''}
+                          onChange={(e) => updateFeature(index, 'uiData.props', { 
+                            ...feature.uiData.props, 
+                            link: e.target.value 
+                          })}
+                          className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+                          placeholder="Link URL (optional, e.g., https://minecraft.net/eula)"
+                        />
+                      </div>
+                    )}
+                    
+                    {feature.uiData.component === 'select' && (
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={feature.uiData.props?.label || ''}
+                          onChange={(e) => updateFeature(index, 'uiData.props', { 
+                            ...feature.uiData.props, 
+                            label: e.target.value 
+                          })}
+                          className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+                          placeholder="Select Label (e.g., Java Version)"
+                        />
+                        
+                        <div className="text-xs text-gray-700 mt-2 mb-1">Options:</div>
+                        {feature.uiData.props?.options?.map((option, optIdx) => (
+                          <div key={optIdx} className="flex items-center space-x-2">
+                            <input
+                              type="text"
+                              value={option.value}
+                              onChange={(e) => {
+                                const newOptions = [...(feature.uiData.props?.options || [])];
+                                newOptions[optIdx] = { ...option, value: e.target.value };
+                                updateFeature(index, 'uiData.props', { 
+                                  ...feature.uiData.props, 
+                                  options: newOptions 
+                                });
+                              }}
+                              className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+                              placeholder="Value"
+                            />
+                            <input
+                              type="text"
+                              value={option.label}
+                              onChange={(e) => {
+                                const newOptions = [...(feature.uiData.props?.options || [])];
+                                newOptions[optIdx] = { ...option, label: e.target.value };
+                                updateFeature(index, 'uiData.props', { 
+                                  ...feature.uiData.props, 
+                                  options: newOptions 
+                                });
+                              }}
+                              className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+                              placeholder="Label"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newOptions = feature.uiData.props?.options?.filter((_, i) => i !== optIdx) || [];
+                                updateFeature(index, 'uiData.props', { 
+                                  ...feature.uiData.props, 
+                                  options: newOptions 
+                                });
+                              }}
+                              className="p-1 text-gray-400 hover:text-red-500"
+                            >
+                              <TrashIcon className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                        
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const options = feature.uiData.props?.options || [];
+                            updateFeature(index, 'uiData.props', { 
+                              ...feature.uiData.props, 
+                              options: [...options, { value: '', label: '' }] 
+                            });
+                          }}
+                          className="px-2 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 mt-1"
+                        >
+                          Add Option
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+            
+            <button
+              type="button"
+              onClick={() => removeFeature(index)}
+              className="ml-2 p-1 text-gray-400 hover:text-red-500"
+            >
+              <TrashIcon className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {features.length === 0 && (
+        <div className="text-center py-4 border border-gray-200 border-dashed rounded-md">
+          <p className="text-xs text-gray-500">No features defined</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// V3: Meta Form Component
+const MetaForm: React.FC<{
+  meta: Unit['meta'],
+  onChange: (meta: Unit['meta']) => void
+}> = ({ meta, onChange }) => {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <label className="block text-xs font-medium text-gray-700">Metadata</label>
+      </div>
+      
+      <div className="border border-gray-200 rounded-md p-3 space-y-3">
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Version</label>
+            <input
+              type="text"
+              value={meta.version}
+              readOnly
+              className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md bg-gray-50"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Author</label>
+            <input
+              type="text"
+              value={meta.author || ''}
+              onChange={(e) => onChange({ ...meta, author: e.target.value })}
+              className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+              placeholder="Author name or organization"
+            />
+          </div>
+        </div>
+        
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Website</label>
+          <input
+            type="text"
+            value={meta.website || ''}
+            onChange={(e) => onChange({ ...meta, website: e.target.value })}
+            className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+            placeholder="https://example.com"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Support URL</label>
+          <input
+            type="text"
+            value={meta.supportUrl || ''}
+            onChange={(e) => onChange({ ...meta, supportUrl: e.target.value })}
+            className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+            placeholder="https://support.example.com"
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Environment Variables Form Component
 const EnvironmentVariableForm: React.FC<{
@@ -473,10 +917,16 @@ const AdminUnitsPage: React.FC = () => {
   const [view, setView] = useState<View>('list');
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [assignedContainers, setAssignedContainers] = useState<Container[]>([]);
+  
+  // V3: Updated initial form state
   const [formData, setFormData] = useState<Omit<Unit, 'id' | 'createdAt' | 'updatedAt'>>({
     name: '',
     shortName: '',
     description: '',
+    // V3: Multiple Docker images
+    dockerImages: [{ image: '', displayName: 'Default Image' }],
+    defaultDockerImage: '',
+    // Legacy field
     dockerImage: '',
     defaultStartupCommand: '',
     configFiles: [],
@@ -486,12 +936,25 @@ const AdminUnitsPage: React.FC = () => {
       entrypoint: 'bash',
       script: ''
     },
+    // V3: Enhanced startup configuration
     startup: {
-      userEditable: false
+      userEditable: false,
+      readyRegex: '',
+      stopCommand: ''
+    },
+    // V3: Features section
+    features: [] as Unit['features'], // Explicitly type the features array
+    // V3: Meta information
+    meta: {
+      version: 'argon/unit:v3',
+      author: '',
+      website: '',
+      supportUrl: ''
     }
   });
+  
   const [formError, setFormError] = useState<string | null>(null);
-  console.log(error)
+
   useEffect(() => {
     fetchUnits();
   }, []);
@@ -630,10 +1093,13 @@ const AdminUnitsPage: React.FC = () => {
   };
 
   const resetForm = () => {
+    // V3: Updated form reset with V3 fields
     setFormData({
       name: '',
       shortName: '',
       description: '',
+      dockerImages: [{ image: '', displayName: 'Default Image' }],
+      defaultDockerImage: '',
       dockerImage: '',
       defaultStartupCommand: '',
       configFiles: [],
@@ -644,7 +1110,16 @@ const AdminUnitsPage: React.FC = () => {
         script: ''
       },
       startup: {
-        userEditable: false
+        userEditable: false,
+        readyRegex: '',
+        stopCommand: ''
+      },
+      features: [] as Unit['features'],
+      meta: {
+        version: 'argon/unit:v3',
+        author: '',
+        website: '',
+        supportUrl: ''
       }
     });
     setSelectedUnit(null);
@@ -652,16 +1127,21 @@ const AdminUnitsPage: React.FC = () => {
   };
 
   const handleExport = (unit: Unit) => {
+    // V3: Export updated with V3 fields
     const exportData = {
       name: unit.name,
       shortName: unit.shortName,
       description: unit.description,
+      dockerImages: unit.dockerImages,
+      defaultDockerImage: unit.defaultDockerImage,
       dockerImage: unit.dockerImage,
       defaultStartupCommand: unit.defaultStartupCommand,
       configFiles: unit.configFiles,
       environmentVariables: unit.environmentVariables,
       installScript: unit.installScript,
-      startup: unit.startup
+      startup: unit.startup,
+      features: unit.features,
+      meta: unit.meta
     };
     
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
@@ -681,14 +1161,37 @@ const AdminUnitsPage: React.FC = () => {
         const content = e.target?.result as string;
         const importedUnit = JSON.parse(content);
         
+        // V3: Handle older export formats
+        if (importedUnit.dockerImage && (!importedUnit.dockerImages || importedUnit.dockerImages.length === 0)) {
+          importedUnit.dockerImages = [{ 
+            image: importedUnit.dockerImage, 
+            displayName: 'Default Image' 
+          }];
+          importedUnit.defaultDockerImage = importedUnit.dockerImage;
+        }
+        
+        // V3: Ensure meta is present
+        if (!importedUnit.meta) {
+          importedUnit.meta = { version: 'argon/unit:v3' };
+        }
+        
+        // V3: Ensure features array exists
+        if (!importedUnit.features) {
+          importedUnit.features = [];
+        }
+        
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/units', {
+        const response = await fetch('/api/units/import', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify(importedUnit)
+          body: (() => {
+            const formData = new FormData();
+            const blob = new Blob([JSON.stringify(importedUnit)], { type: 'application/json' });
+            formData.append('file', blob, 'unit.json');
+            return formData;
+          })()
         });
         
         if (!response.ok) {
@@ -725,11 +1228,17 @@ const AdminUnitsPage: React.FC = () => {
           rawegg = JSON.parse(rawegg);
         }
         
-        // Convert Pterodactyl egg to Argon unit
+        // V3: Convert Pterodactyl egg to Argon unit with v3 features
         const unit = {
           name: rawegg.name,
           shortName: rawegg.name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
           description: rawegg.description,
+          // V3: Convert single image to docker images array
+          dockerImages: [{ 
+            image: Object.values(rawegg.docker_images)[0] as string, 
+            displayName: 'Default Image' 
+          }],
+          defaultDockerImage: Object.values(rawegg.docker_images)[0] as string,
           dockerImage: Object.values(rawegg.docker_images)[0] as string,
           defaultStartupCommand: rawegg.startup,
           configFiles: [],
@@ -747,10 +1256,38 @@ const AdminUnitsPage: React.FC = () => {
             entrypoint: rawegg.scripts.installation.entrypoint,
             script: rawegg.scripts.installation.script
           },
+          // V3: Enhanced startup information if available
           startup: {
-            userEditable: true
+            userEditable: true,
+            readyRegex: rawegg.config?.container?.startup?.done || '',
+            stopCommand: rawegg.config?.container?.stop || ''
+          },
+          // V3: Add features based on egg data
+          features: [] as Unit['features'],
+          // V3: Add metadata
+          meta: {
+            version: 'argon/unit:v3',
+            author: rawegg.author || 'Imported from Pterodactyl',
+            website: '',
+            supportUrl: ''
           }
         };
+
+        // Add EULA feature if needed
+        if (unit.environmentVariables.some((v: { name: string; }) => v.name === 'EULA' || v.name === 'MC_EULA')) {
+          unit.features.push({
+            name: 'eula-agreement',
+            description: 'Minecraft EULA acceptance is required to run the server',
+            type: 'required',
+            uiData: {
+              component: 'checkbox',
+              props: {
+                label: 'I accept the Minecraft End User License Agreement',
+                link: 'https://www.minecraft.net/en-us/eula'
+              }
+            }
+          });
+        }
 
         const token = localStorage.getItem('token');
         const response = await fetch('/api/units', {
@@ -777,6 +1314,7 @@ const AdminUnitsPage: React.FC = () => {
     reader.readAsText(file);
   };
 
+  // V3: Updated unit form with new fields
   const renderUnitForm = (type: 'create' | 'edit') => (
     <form onSubmit={type === 'create' ? handleCreate : handleUpdate} className="space-y-4 max-w-lg">
       {formError && (
@@ -823,18 +1361,17 @@ const AdminUnitsPage: React.FC = () => {
         />
       </div>
 
-      {/* Docker Configuration */}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-700">Docker Image</label>
-        <input
-          type="text"
-          value={formData.dockerImage}
-          onChange={(e) => setFormData({ ...formData, dockerImage: e.target.value })}
-          className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
-          placeholder="itzg/minecraft-server:java17"
-          required
-        />
-      </div>
+      {/* V3: Docker Images Configuration */}
+      <DockerImagesForm 
+        images={formData.dockerImages}
+        defaultImage={formData.defaultDockerImage}
+        onChange={(images, defaultImage) => setFormData({
+          ...formData,
+          dockerImages: images,
+          defaultDockerImage: defaultImage,
+          dockerImage: defaultImage // Keep legacy field in sync
+        })}
+      />
 
       <div className="space-y-1">
         <label className="block text-xs font-medium text-gray-700">Default Startup Command</label>
@@ -846,6 +1383,63 @@ const AdminUnitsPage: React.FC = () => {
           placeholder="java -Xms128M -Xmx{{SERVER_MEMORY}}M -jar server.jar"
           required
         />
+      </div>
+
+      {/* V3: Enhanced Startup Configuration */}
+      <div className="space-y-3 p-3 border border-gray-200 rounded-md">
+        <label className="block text-xs font-medium text-gray-700">Startup Configuration</label>
+        
+        <div className="flex items-center space-x-2">
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={formData.startup.userEditable}
+              onChange={(e) => setFormData({ 
+                ...formData, 
+                startup: { 
+                  ...formData.startup, 
+                  userEditable: e.target.checked 
+                } 
+              })}
+              className="text-xs"
+            />
+            <span className="text-xs">User Editable</span>
+          </label>
+        </div>
+        
+        <div className="space-y-1">
+          <label className="block text-xs text-gray-500">Ready Regex (detects when server is online)</label>
+          <input
+            type="text"
+            value={formData.startup.readyRegex || ''}
+            onChange={(e) => setFormData({ 
+              ...formData, 
+              startup: { 
+                ...formData.startup, 
+                readyRegex: e.target.value 
+              } 
+            })}
+            className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+            placeholder="e.g., Done \(.*\)!"
+          />
+        </div>
+        
+        <div className="space-y-1">
+          <label className="block text-xs text-gray-500">Stop Command (gracefully stops the server)</label>
+          <input
+            type="text"
+            value={formData.startup.stopCommand || ''}
+            onChange={(e) => setFormData({ 
+              ...formData, 
+              startup: { 
+                ...formData.startup, 
+                stopCommand: e.target.value 
+              } 
+            })}
+            className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+            placeholder="e.g., stop"
+          />
+        </div>
       </div>
 
       {/* Environment Variables */}
@@ -900,27 +1494,17 @@ const AdminUnitsPage: React.FC = () => {
         />
       </div>
 
-      {/* Startup Configuration */}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-700">Startup Configuration</label>
-        <div className="flex items-center space-x-2">
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={formData.startup.userEditable}
-              onChange={(e) => setFormData({ 
-                ...formData, 
-                startup: { 
-                  ...formData.startup, 
-                  userEditable: e.target.checked 
-                } 
-              })}
-              className="text-xs"
-            />
-            <span className="text-xs">User Editable</span>
-          </label>
-        </div>
-      </div>
+      {/* V3: Features */}
+      <FeaturesForm
+        features={formData.features}
+        onChange={(features) => setFormData({ ...formData, features: features })}
+      />
+
+      {/* V3: Metadata */}
+      <MetaForm
+        meta={formData.meta}
+        onChange={(meta) => setFormData({ ...formData, meta: meta })}
+      />
 
       {/* Cargo Containers Section */}
       {type === 'edit' && selectedUnit?.id && (
@@ -955,6 +1539,7 @@ const AdminUnitsPage: React.FC = () => {
     </form>
   );
 
+  // V3: Updated unit details view with new fields
   const renderUnitDetails = () => {
     if (!selectedUnit) return null;
 
@@ -979,16 +1564,21 @@ const AdminUnitsPage: React.FC = () => {
           <div className="flex items-center space-x-3">
             <button
               onClick={() => {
+                // V3: Update form data with all v3 fields
                 setFormData({
                   name: selectedUnit.name,
                   shortName: selectedUnit.shortName,
                   description: selectedUnit.description,
+                  dockerImages: selectedUnit.dockerImages || [{ image: selectedUnit.dockerImage, displayName: 'Default Image' }],
+                  defaultDockerImage: selectedUnit.defaultDockerImage || selectedUnit.dockerImage,
                   dockerImage: selectedUnit.dockerImage,
                   defaultStartupCommand: selectedUnit.defaultStartupCommand,
                   configFiles: selectedUnit.configFiles || [],
                   environmentVariables: selectedUnit.environmentVariables || [],
                   installScript: selectedUnit.installScript,
-                  startup: selectedUnit.startup
+                  startup: selectedUnit.startup,
+                  features: selectedUnit.features || [],
+                  meta: selectedUnit.meta || { version: 'argon/unit:v3' }
                 });
                 setView('edit');
               }}
@@ -1019,16 +1609,62 @@ const AdminUnitsPage: React.FC = () => {
             <div className="text-sm mt-1">{selectedUnit.description}</div>
           </div>
 
+          {/* V3: Docker Images Section */}
           <div className="pt-4 border-t border-gray-100">
-            <div className="text-xs font-medium text-gray-900 mb-3">Docker Configuration</div>
-            <div className="space-y-2">
-              <div>
-                <div className="text-xs text-gray-500">Image</div>
-                <div className="text-sm font-mono mt-1">{selectedUnit.dockerImage}</div>
+            <div className="text-xs font-medium text-gray-900 mb-3">Docker Images</div>
+            {selectedUnit.dockerImages && selectedUnit.dockerImages.length > 0 ? (
+              <div className="space-y-2">
+                {selectedUnit.dockerImages.map((image, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 border border-gray-100 rounded">
+                    <div className="flex items-center space-x-3">
+                      <TagIcon className="w-4 h-4 text-gray-400" />
+                      <div>
+                        <div className="text-sm font-medium">{image.displayName}</div>
+                        <div className="text-xs font-mono text-gray-500">{image.image}</div>
+                      </div>
+                    </div>
+                    {selectedUnit.defaultDockerImage === image.image && (
+                      <span className="px-2 py-1 text-xs bg-green-50 text-green-600 rounded-full">Default</span>
+                    )}
+                  </div>
+                ))}
               </div>
+            ) : (
+              <div className="flex items-center p-2 border border-gray-100 rounded">
+                <TagIcon className="w-4 h-4 text-gray-400 mr-3" />
+                <div className="text-sm font-mono">{selectedUnit.dockerImage}</div>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-gray-100">
+            <div className="text-xs font-medium text-gray-900 mb-3">Startup Configuration</div>
+            <div className="space-y-2">
               <div>
                 <div className="text-xs text-gray-500">Default Startup Command</div>
                 <div className="text-sm font-mono mt-1 break-all">{selectedUnit.defaultStartupCommand}</div>
+              </div>
+              
+              {/* V3: Enhanced startup details */}
+              <div className="grid grid-cols-2 gap-4 mt-3">
+                <div>
+                  <div className="text-xs text-gray-500">User Editable</div>
+                  <div className="text-sm mt-1">
+                    {selectedUnit.startup?.userEditable ? "Yes" : "No"}
+                  </div>
+                </div>
+                {selectedUnit.startup?.readyRegex && (
+                  <div>
+                    <div className="text-xs text-gray-500">Ready Detection</div>
+                    <div className="text-sm font-mono mt-1 break-all">{selectedUnit.startup.readyRegex}</div>
+                  </div>
+                )}
+                {selectedUnit.startup?.stopCommand && (
+                  <div>
+                    <div className="text-xs text-gray-500">Stop Command</div>
+                    <div className="text-sm font-mono mt-1">{selectedUnit.startup.stopCommand}</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1102,6 +1738,116 @@ const AdminUnitsPage: React.FC = () => {
             )}
           </div>
 
+          {/* V3: Features Section */}
+          <div className="pt-4 border-t border-gray-100">
+            <div className="text-xs font-medium text-gray-900 mb-3">Features</div>
+            {selectedUnit.features && selectedUnit.features.length > 0 ? (
+              <div className="space-y-3">
+                {selectedUnit.features.map((feature, index) => (
+                  <div key={index} className="border border-gray-100 rounded p-3">
+                    <div className="flex items-start">
+                      {feature.iconPath && (
+                        <div className="mr-3">
+                          <img src={feature.iconPath} alt={feature.name} className="w-5 h-5" />
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-sm font-medium">{feature.name}</div>
+                        <div className="text-xs text-gray-500 mt-1">{feature.description}</div>
+                        <div className="mt-2 flex space-x-3">
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            feature.type === 'required' 
+                              ? 'bg-orange-50 text-orange-700' 
+                              : 'bg-blue-50 text-blue-700'
+                          }`}>
+                            {feature.type === 'required' ? 'Required' : 'Optional'}
+                          </span>
+                          
+                          {feature.uiData && (
+                            <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">
+                              {feature.uiData.component} component
+                            </span>
+                          )}
+                        </div>
+                        
+                        {feature.uiData?.props && (
+                          <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                            <div className="font-medium mb-1">Component Properties:</div>
+                            <ul className="list-disc pl-4 space-y-1">
+                              {Object.entries(feature.uiData.props).map(([key, value]) => (
+                                <li key={key}>
+                                  <span className="font-medium">{key}:</span> {
+                                    typeof value === 'object' 
+                                      ? JSON.stringify(value) 
+                                      : String(value)
+                                  }
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-xs text-gray-500">No features defined</div>
+            )}
+          </div>
+
+          {/* V3: Metadata Section */}
+          <div className="pt-4 border-t border-gray-100">
+            <div className="text-xs font-medium text-gray-900 mb-3">Metadata</div>
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500">Version</div>
+                  <div className="text-sm font-mono mt-1">
+                    {selectedUnit.meta?.version || 'argon/unit:v3'}
+                  </div>
+                </div>
+                {selectedUnit.meta?.author && (
+                  <div>
+                    <div className="text-xs text-gray-500">Author</div>
+                    <div className="text-sm mt-1">{selectedUnit.meta.author}</div>
+                  </div>
+                )}
+              </div>
+              
+              {(selectedUnit.meta?.website || selectedUnit.meta?.supportUrl) && (
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  {selectedUnit.meta?.website && (
+                    <div>
+                      <div className="text-xs text-gray-500">Website</div>
+                      <a 
+                        href={selectedUnit.meta.website} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-sm text-blue-600 hover:underline mt-1 inline-block"
+                      >
+                        {selectedUnit.meta.website}
+                      </a>
+                    </div>
+                  )}
+                  {selectedUnit.meta?.supportUrl && (
+                    <div>
+                      <div className="text-xs text-gray-500">Support URL</div>
+                      <a 
+                        href={selectedUnit.meta.supportUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-sm text-blue-600 hover:underline mt-1 inline-block"
+                      >
+                        {selectedUnit.meta.supportUrl}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Cargo Containers Section */}
           <div className="pt-4 border-t border-gray-100">
             <div className="text-xs font-medium text-gray-900 mb-3">Cargo Containers</div>
@@ -1129,13 +1875,6 @@ const AdminUnitsPage: React.FC = () => {
                   {selectedUnit.installScript.script}
                 </pre>
               </div>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-gray-100">
-            <div className="text-xs font-medium text-gray-900 mb-3">Startup Configuration</div>
-            <div className="text-xs text-gray-500">
-              {selectedUnit.startup.userEditable ? "Users can modify startup command" : "Startup command is locked"}
             </div>
           </div>
 
@@ -1223,10 +1962,28 @@ const AdminUnitsPage: React.FC = () => {
                     <div className="flex-1">
                       <div className="text-sm font-medium text-gray-900">{unit.name}</div>
                       <div className="text-xs text-gray-500 mt-1">
-                        {unit.shortName} • {unit.dockerImage}
+                        {unit.shortName} • {
+                          unit.meta?.version === 'argon/unit:v3' 
+                            ? (
+                              <>
+                                {unit.dockerImages && unit.dockerImages.length > 1
+                                  ? `${unit.dockerImages.length} images`
+                                  : unit.dockerImage
+                                }
+                                {' • '}
+                                <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full text-xs">Unit v3</span>
+                              </>
+                            )
+                            : unit.dockerImage
+                        }
                       </div>
                     </div>
                     <div className="flex items-center">
+                      {unit.features && unit.features.length > 0 && (
+                        <div className="mr-3 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
+                          {unit.features.length} Features
+                        </div>
+                      )}
                       <ChevronRightIcon className="w-4 h-4 text-gray-400" />
                     </div>
                   </div>

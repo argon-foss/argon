@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ChevronRightIcon, FolderIcon, XIcon, AlertTriangleIcon, CheckIcon } from 'lucide-react';
+import { ChevronRightIcon, FolderIcon, XIcon, AlertTriangleIcon, CheckIcon, MoreHorizontalIcon } from 'lucide-react';
 import { CubeTransparentIcon } from '@heroicons/react/24/solid';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -16,6 +16,7 @@ interface Node {
 interface ServerStatus {
   state: string;
   status: any;
+  id?: string;
 }
 
 interface Server {
@@ -31,71 +32,85 @@ interface Server {
   userId: string;
 }
 
-// Modal component 
-interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
+// Tooltip component
+interface TooltipProps {
   children: React.ReactNode;
-  maxWidth?: string;
+  content: string;
+  position?: 'top' | 'right' | 'bottom' | 'left';
 }
 
-const Modal: React.FC<ModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  title, 
+const Tooltip: React.FC<TooltipProps> = ({ 
   children, 
-  maxWidth = 'max-w-md' 
+  content, 
+  position = 'right' 
 }) => {
-  const modalRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
   
+  // Updated position classes with higher z-index and adjusted positioning
+  const positionClasses = {
+    top: "fixed transform -translate-x-1/2 -translate-y-full mt-[-8px]",
+    right: "fixed transform translate-x-2 -translate-y-1/2",
+    bottom: "fixed transform -translate-x-1/2 translate-y-2",
+    left: "fixed transform -translate-x-full -translate-y-1/2 ml-[-8px]"
+  };
+
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Calculate tooltip position on hover
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && event.target instanceof Node && !modalRef.current.contains(event.target)) {
-        onClose();
+    if (isVisible && containerRef.current && tooltipRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const tooltipRect = tooltipRef.current.getBoundingClientRect();
+      
+      let top: number;
+      let left: number;
+      
+      switch (position) {
+        case 'top':
+          left = rect.left + rect.width / 2;
+          top = rect.top;
+          break;
+        case 'right':
+          left = rect.right;
+          top = rect.top + rect.height / 2;
+          break;
+        case 'bottom':
+          left = rect.left + rect.width / 2;
+          top = rect.bottom;
+          break;
+        case 'left':
+          left = rect.left;
+          top = rect.top + rect.height / 2;
+          break;
+        default:
+          left = rect.right;
+          top = rect.top + rect.height / 2;
       }
-    };
-    
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
+      
+      tooltipRef.current.style.left = `${left}px`;
+      tooltipRef.current.style.top = `${top}px`;
     }
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'auto';
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
+  }, [isVisible, position]);
+  
   return (
-    <div className="fixed inset-0 bg-gray-100 bg-opacity-50 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ease-in-out animate-fade-in">
-      <div 
-        ref={modalRef}
-        className={`bg-white rounded-lg shadow-xs w-full ${maxWidth} transform transition-all duration-200 ease-in-out animate-scale-in`}
-      >
-        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">{title}</h3>
-          <button 
-            onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors duration-150"
-          >
-            <XIcon className="w-5 h-5" />
-          </button>
+    <div 
+      className="relative inline-block" 
+      ref={containerRef}
+      onMouseEnter={() => setIsVisible(true)}
+      onMouseLeave={() => setIsVisible(false)}
+    >
+      {children}
+      {isVisible && (
+        <div 
+          ref={tooltipRef}
+          className={`${positionClasses[position]} z-[999]`}
+        >
+          <div className="px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white rounded-md shadow-md border border-gray-100 whitespace-nowrap">
+            {content}
+          </div>
         </div>
-        <div className="px-6 py-4">
-          {children}
-        </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -125,7 +140,7 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
       {onDismiss && (
         <button
           onClick={onDismiss}
-          className={`p-2 ${textColor} hover:bg-opacity-10 cursor-pointer rounded-full`}
+          className={`p-4 ${textColor} hover:bg-opacity-10 cursor-pointer rounded-full`}
         >
           <XIcon className="w-4 h-4" />
         </button>
@@ -134,99 +149,118 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
   );
 };
 
-// Server Move Project Dialog
-interface ServerMoveDialogProps {
+// Dropdown Menu Component
+interface DropdownMenuProps {
+  children: React.ReactNode;
   isOpen: boolean;
   onClose: () => void;
-  server: Server | null;
-  onMove: (projectId: string) => Promise<void>;
-  projects: any[];
-  currentProjectId: string | null;
-  isSubmitting: boolean;
-  error: string | null;
 }
 
-const ServerMoveDialog: React.FC<ServerMoveDialogProps> = ({
-  isOpen,
-  onClose,
-  server,
-  onMove,
-  projects,
-  currentProjectId,
-  isSubmitting,
-  error
-}) => {
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
-
+const DropdownMenu: React.FC<DropdownMenuProps> = ({ children, isOpen, onClose }) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+  
   useEffect(() => {
-    if (isOpen && projects.length > 0) {
-      // Default to the first project that's not the current one
-      const otherProject = projects.find(p => p.id !== currentProjectId);
-      if (otherProject) {
-        setSelectedProjectId(otherProject.id);
-      } else if (projects.length > 0) {
-        setSelectedProjectId(projects[0].id);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        onClose();
       }
+    };
+    
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
     }
-  }, [isOpen, projects, currentProjectId]);
-
-  if (!isOpen || !server) return null;
-
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+  
+  if (!isOpen) return null;
+  
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Move Server to Project">
-      {error && (
-        <Alert
-          type="error"
-          message={error}
-        />
-      )}
-      
-      <div className="mb-6">
-        <p className="text-sm text-gray-600 mb-4">
-          Move <span className="font-medium">{server.name}</span> to another project
-        </p>
-        
-        <div className="mb-6">
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Select Project
-          </label>
-          <select
-            value={selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400"
+    <div 
+      ref={menuRef}
+      className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden transform transition-all duration-150 ease-spring origin-top-right z-20 animate-scale-in"
+    >
+      {children}
+    </div>
+  );
+};
+
+// Menu Item Component 
+interface MenuItemProps {
+  icon?: React.ElementType;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}
+
+const MenuItem: React.FC<MenuItemProps> = ({ 
+  icon: Icon, 
+  label, 
+  onClick, 
+  disabled = false 
+}) => {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full text-left px-4 py-2.5 text-sm transition duration-150 text-gray-700 hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+    >
+      {Icon && <Icon className="mr-2 h-4 w-4 text-gray-500" />}
+      <span>{label}</span>
+    </button>
+  );
+};
+
+// Server Project Picker Component
+interface ServerProjectPickerProps {
+  server: Server;
+  projects: any[];
+  onProjectSelect: (projectId: string) => void;
+  onBack: () => void;
+  currentProjectId: string;
+}
+
+const ServerProjectPicker: React.FC<ServerProjectPickerProps> = ({
+  server,
+  projects,
+  onProjectSelect,
+  onBack,
+  currentProjectId
+}) => {
+  return (
+    <div className="animate-slide-in">
+      <div className="flex items-center px-3 py-2 border-b border-gray-100">
+        <button
+          onClick={onBack}
+          className="p-1.5 rounded-md hover:bg-gray-100 active:bg-gray-200 transition-colors mr-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <span className="text-sm font-medium text-gray-700">Move to project</span>
+      </div>
+      <div className="max-h-48 overflow-y-auto py-1">
+        {projects.map(project => (
+          <button
+            key={project.id}
+            onClick={() => onProjectSelect(project.id)}
+            disabled={project.id === server.projectId}
+            className={`w-full text-left px-4 py-2.5 text-sm transition-colors duration-150 flex items-center
+              ${project.id === server.projectId 
+                ? 'text-gray-400 cursor-not-allowed bg-gray-50' 
+                : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'}`}
           >
-            {projects.map(project => (
-              <option 
-                key={project.id} 
-                value={project.id}
-                disabled={project.id === server.projectId}
-              >
-                {project.name} {project.id === server.projectId ? '(Current)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
+            <span>{project.name}</span>
+            {project.id === server.projectId && (
+              <span className="ml-auto text-xs text-gray-400">(Current)</span>
+            )}
+          </button>
+        ))}
       </div>
-      
-      <div className="flex justify-end space-x-3">
-        <button
-          type="button"
-          onClick={onClose}
-          className="px-4 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors duration-150"
-          disabled={isSubmitting}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={() => onMove(selectedProjectId)}
-          disabled={isSubmitting || selectedProjectId === server.projectId}
-          className="px-4 py-2 text-xs font-medium text-white bg-gray-900 border border-transparent rounded-md hover:bg-gray-800 focus:outline-none transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSubmitting ? 'Moving...' : 'Move Server'}
-        </button>
-      </div>
-    </Modal>
+    </div>
   );
 };
 
@@ -237,11 +271,18 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('servers');
-  const [isMovingServer, setIsMovingServer] = useState(false);
-  const [selectedServer, setSelectedServer] = useState<Server | null>(null);
+  const [menuState, setMenuState] = useState<{
+    open: boolean;
+    serverId: string | null;
+    mode: 'main' | 'project-picker';
+  }>({
+    open: false,
+    serverId: null,
+    mode: 'main'
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [moveError, setMoveError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [nodeWarnings, setNodeWarnings] = useState<boolean>(false);
   
   // State for tab indicator animation
   const [indicatorStyle, setIndicatorStyle] = useState({
@@ -338,7 +379,7 @@ export default function Home() {
       <button
         ref={buttonRef}
         onClick={onClick}
-        className={`tab-button relative z-10 px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 outline-none focus:outline-none focus:ring-0 ${
+        className={`tab-button relative z-5 cursor-pointer px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 outline-none focus:outline-none focus:ring-0 ${
           isActive
             ? 'text-gray-800 border-none'
             : 'text-gray-500 border-none hover:text-gray-700 hover:bg-gray-50'
@@ -362,6 +403,14 @@ export default function Home() {
       setFilteredServers(servers);
     }
   }, [currentProject, servers]);
+  
+  // Check for any node connection issues
+  useEffect(() => {
+    if (filteredServers.length > 0) {
+      const hasNodeWarnings = filteredServers.some(server => !server.status?.id);
+      setNodeWarnings(hasNodeWarnings);
+    }
+  }, [filteredServers]);
 
   const stats = {
     total: filteredServers.length,
@@ -369,34 +418,73 @@ export default function Home() {
     offline: filteredServers.filter(s => s.status?.status?.state !== 'running').length
   };
 
-  const handleMoveServer = async (projectId: string) => {
-    if (!selectedServer) return;
+  const handleOpenMenu = (serverId: string) => {
+    setMenuState({
+      open: true,
+      serverId,
+      mode: 'main'
+    });
+  };
+
+  const handleCloseMenu = () => {
+    setMenuState({
+      open: false,
+      serverId: null,
+      mode: 'main'
+    });
+  };
+
+  const handleMoveToProjectClick = () => {
+    setMenuState(prev => ({
+      ...prev,
+      mode: 'project-picker'
+    }));
+  };
+
+  const handleBackFromProjectPicker = () => {
+    setMenuState(prev => ({
+      ...prev,
+      mode: 'main'
+    }));
+  };
+
+  const handleProjectSelect = async (projectId: string) => {
+    if (!menuState.serverId) return;
     
     try {
-      setMoveError(null);
       setIsSubmitting(true);
-      await moveServerToProject(selectedServer.id, projectId);
+      await moveServerToProject(menuState.serverId, projectId);
       
       // Update the local server list
       setServers(prevServers => 
         prevServers.map(server => 
-          server.id === selectedServer.id 
+          server.id === menuState.serverId 
             ? { ...server, projectId } 
             : server
         )
       );
       
-      setIsMovingServer(false);
-      setSelectedServer(null);
+      setMenuState({
+        open: false,
+        serverId: null,
+        mode: 'main'
+      });
+      
       setSuccessMessage(`Server moved to project successfully`);
       
       // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccessMessage(null);
       }, 3000);
-    } catch (error) {
-      console.error("Failed to move server:", error);
-      setMoveError(error instanceof Error ? error.message : 'Failed to move server');
+    } catch (err) {
+      console.error("Failed to move server:", err);
+      setSuccessMessage(null);
+      setError(err instanceof Error ? err.message : 'Failed to move server');
+      
+      // Clear error after 3 seconds
+      setTimeout(() => {
+        setError(null);
+      }, 3000);
     } finally {
       setIsSubmitting(false);
     }
@@ -426,11 +514,16 @@ export default function Home() {
     }
   };
 
+  const getSelectedServer = () => {
+    if (!menuState.serverId) return null;
+    return servers.find(server => server.id === menuState.serverId) || null;
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
 
-  if (error) {
+  if (error && !successMessage) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-red-600 text-sm">Failed to load servers: {error}</div>
@@ -468,6 +561,24 @@ export default function Home() {
             type="success"
             message={successMessage}
             onDismiss={() => setSuccessMessage(null)}
+          />
+        )}
+        
+        {/* Node Warnings Alert */}
+        {nodeWarnings && (
+          <Alert
+            type="warning"
+            message="One or more servers' nodes couldn't be reached. They may be inaccessible as a result. If so, you should probably contact an administrator. This is unlikely to be a problem with your network in this scenario."
+            onDismiss={() => setNodeWarnings(false)}
+          />
+        )}
+        
+        {/* Error Message */}
+        {error && (
+          <Alert 
+            type="error"
+            message={error}
+            onDismiss={() => setError(null)}
           />
         )}
 
@@ -516,6 +627,7 @@ export default function Home() {
               <div className="space-y-1.5">
                 {filteredServers.map((server) => (
                   <div
+                    id={`server-${server.id}`}
                     key={server.id}
                     className="block bg-white rounded-md border border-gray-200 shadow-xs overflow-hidden"
                   >
@@ -532,13 +644,21 @@ export default function Home() {
                                 : 'bg-gray-300'
                             }`}></div>
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex items-center">
                             <div className="text-xs font-medium text-gray-900 truncate">
                               {server.name}
                             </div>
-                            <div className="text-[11px] text-gray-500">
-                              {/* @ts-ignore */}
-                              {server.status?.id}
+                            {/* Warning icon for node connection issue */}
+                            {!server.status?.id && (
+                              <Tooltip 
+                                content="Node connection issue. Server may be inaccessible."
+                                position="top"
+                              >
+                                <AlertTriangleIcon className="ml-2 h-3.5 w-3.5 text-amber-500" />
+                              </Tooltip>
+                            )}
+                            <div className="text-[11px] text-gray-500 ml-1">
+                              {server.status?.id || 'Connection error'}
                             </div>
                           </div>
                         </div>
@@ -556,19 +676,20 @@ export default function Home() {
                         </div>
                       </Link>
                       
-                      {/* Project menu button - only show if not in default project or if there are multiple projects */}
+                      {/* Three dots menu button */}
                       {(projects.length > 1) && (
-                        <button
-                          onClick={() => {
-                            setSelectedServer(server);
-                            setMoveError(null);
-                            setIsMovingServer(true);
-                          }}
-                          className="h-full px-3 border-l border-gray-200 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors duration-150"
-                          title="Move to different project"
-                        >
-                          <FolderIcon className="w-4 h-4" />
-                        </button>
+                        <div className="relative h-full">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent link click
+                              handleOpenMenu(server.id);
+                            }}
+                            className="h-full px-3 border-l border-gray-200 text-gray-400 cursor-pointer hover:text-gray-600 hover:bg-gray-50 transition-colors duration-150 flex items-center"
+                            aria-label="Server options"
+                          >
+                            <MoreHorizontalIcon className="w-4 h-4" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -576,8 +697,8 @@ export default function Home() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-24 bg-white rounded-lg border border-gray-200">
-                <div className="w-16 h-16 bg-gray-100 rounded-xl mb-6">
-                  <CubeTransparentIcon className="w-8 h-8 text-gray-400 mx-auto mt-4.25" />
+                <div className="w-16 h-16 bg-gray-100 rounded-xl mb-6 flex items-center justify-center">
+                  <CubeTransparentIcon className="w-8 h-8 text-gray-400" />
                 </div>
                 <h2 className="text-xl font-semibold text-gray-800 mb-2">
                   {currentProject?.isDefault
@@ -601,14 +722,63 @@ export default function Home() {
           </div>
         )}
 
-        {activeTab === 'overview' && (
-          <div className="bg-white rounded-md border border-gray-200 p-6">
-            <h2 className="text-lg font-medium text-gray-800 mb-4">
-              {currentProject ? `${currentProject.name} Project Overview` : "Server Overview"}
-            </h2>
+        {/* Dropdown menu portal */}
+        {menuState.open && menuState.serverId && (
+          <div className="fixed inset-0 z-50 pointer-events-none">
+            <div 
+              className="absolute right-0 top-0 mt-1 pointer-events-auto"
+              style={{
+                position: 'fixed',
+                // Position the menu relative to the button that opened it
+                top: (() => {
+                  const serverElement = document.getElementById(`server-${menuState.serverId}`);
+                  if (serverElement) {
+                    const rect = serverElement.getBoundingClientRect();
+                    return `${rect.bottom}px`;
+                  }
+                  return '0px';
+                })(),
+                right: (() => {
+                  const serverElement = document.getElementById(`server-${menuState.serverId}`);
+                  if (serverElement) {
+                    const rect = serverElement.getBoundingClientRect();
+                    return `${window.innerWidth - rect.right}px`;
+                  }
+                  return '0px';
+                })()
+              }}
+            >
+              <DropdownMenu 
+                isOpen={menuState.open} 
+                onClose={handleCloseMenu}
+              >
+                {menuState.mode === 'main' ? (
+                  <div className="py-1 animate-fade-in">
+                    <MenuItem
+                      icon={FolderIcon}
+                      label="Move to project"
+                      onClick={handleMoveToProjectClick}
+                    />
+                  </div>
+                ) : (
+                  <ServerProjectPicker
+                    server={getSelectedServer()!}
+                    projects={projects}
+                    onProjectSelect={handleProjectSelect}
+                    onBack={handleBackFromProjectPicker}
+                    currentProjectId={currentProject?.id || ''}
+                  />
+                )}
+              </DropdownMenu>
+            </div>
+          </div>
+        )}
+
+{activeTab === 'overview' && (
+          <div className="">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="border border-gray-200 rounded-md p-4">
-                <div className="text-gray-500 text-sm mb-1">Total Servers</div>
+                <div className="text-gray-500 text-sm mb-1">Total servers in Project</div>
                 <div className="text-2xl font-medium">{stats.total}</div>
               </div>
               <div className="border border-gray-200 rounded-md p-4">
@@ -626,36 +796,13 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            
-            {currentProject && currentProject.description && (
-              <div className="mt-6 p-4 bg-gray-50 rounded-md border border-gray-200">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Project Description</h3>
-                <p className="text-sm text-gray-600">{currentProject.description}</p>
-              </div>
-            )}
           </div>
         )}
       </div>
-
-      {/* Move Server Dialog */}
-      <ServerMoveDialog
-        isOpen={isMovingServer}
-        onClose={() => {
-          setIsMovingServer(false);
-          setSelectedServer(null);
-          setMoveError(null);
-        }}
-        server={selectedServer}
-        onMove={handleMoveServer}
-        projects={projects}
-        currentProjectId={currentProject?.id || null}
-        isSubmitting={isSubmitting}
-        error={moveError}
-      />
       
-      {/* CSS for animations - add to your global CSS or style component */}
+      {/* CSS for animations */}
       <style>{`
-        /* Custom optimized spring easing function - faster with subtle bounce */
+        /* Custom optimized spring easing function */
         .ease-spring { 
           transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1.2); 
         }
@@ -668,6 +815,35 @@ export default function Home() {
         
         .tab-button {
           -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Animation keyframes */
+        @keyframes scale-in {
+          0% { opacity: 0; transform: scale(0.95); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes fade-in {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        
+        @keyframes slide-in {
+          0% { transform: translateX(20px); opacity: 0; }
+          100% { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Animation classes */
+        .animate-scale-in {
+          animation: scale-in 0.15s ease-out forwards;
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.1s ease-out forwards;
+        }
+        
+        .animate-slide-in {
+          animation: slide-in 0.2s ease-out forwards;
         }
       `}</style>
     </div>

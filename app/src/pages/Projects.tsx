@@ -405,15 +405,15 @@ interface AlertProps {
                   className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-xs transition-shadow duration-200"
                 >
                   <div className="p-5">
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between items-start">
                       <div className="flex items-center">
-                        <div className="h-10 w-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
-                          <span className="text-lg font-semibold text-indigo-800">
+                        <div className="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
+                          <span className="text-lg font-semibold text-gray-800">
                             {project.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <div>
-                          <h3 className="text-lg font-medium text-gray-900">
+                          <h3 className="text-lg font-semibold text-gray-900">
                             {project.name}
                             {project.isDefault && (
                               <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
@@ -456,12 +456,6 @@ interface AlertProps {
                           </button>
                         </div>
                       )}
-                    </div>
-                    <div className="pt-3 border-t border-gray-100">
-                      <div className="flex items-center text-sm text-gray-500">
-                        <ServerIcon className="h-4 w-4 mr-1.5 text-gray-400" />
-                        <span>{project.serverCount} server{project.serverCount !== 1 ? 's' : ''}</span>
-                      </div>
                     </div>
                   </div>
                 </div>
