@@ -58,6 +58,15 @@ const parseUnitRow = (row: any): Unit => {
 export function createUnitsRepository({ db }: DatabaseContext) {
   // Migration function
   function migrateToV3(db) {
+    // Check if the units table exists
+    const tableExists = db.prepare(`
+      SELECT name FROM sqlite_master WHERE type='table' AND name='units'
+    `).get();
+
+    if (!tableExists) {
+      return;
+    }
+
     // Check if schema migration is needed
     const tableInfo = db.prepare("PRAGMA table_info(units)").all() as any[];
     const hasDockerImages = tableInfo.some(col => col.name === 'dockerImages');

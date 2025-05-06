@@ -123,6 +123,10 @@ interface EditFormData {
   memoryMiB?: number;
   diskMiB?: number;
   cpuPercent?: number;
+  // V3: Add Docker image selection
+  dockerImage?: string;
+  // V3: Add custom startup command
+  startupCommand?: string;
 }
 
 type View = 'list' | 'create' | 'view' | 'edit';
@@ -140,7 +144,9 @@ const AdminServersPage = () => {
   const [selectedServer, setSelectedServer] = useState<Server | null>(null);
   const [selectedUnitDockerImages, setSelectedUnitDockerImages] = useState<Array<{image: string, displayName: string}>>([]);
   const [isUnitV3, setIsUnitV3] = useState(false);
-
+  const [editUnitDockerImages, setEditUnitDockerImages] = useState<Array<{image: string, displayName: string}>>([]);
+  const [isEditUnitV3, setIsEditUnitV3] = useState(false);
+  
   // Deployment tab state - moved to top level
   const [deploymentTab, setDeploymentTab] = useState<'nodes' | 'regions'>('nodes');
   const [loadingRegions, setLoadingRegions] = useState(false);
@@ -186,6 +192,12 @@ const AdminServersPage = () => {
   }, [createFormData.unitId]);
 
   useEffect(() => {
+    if (view === 'edit' && editFormData.unitId) {
+      fetchEditUnitDetails(editFormData.unitId);
+    }
+  }, [view, editFormData.unitId]);
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -210,6 +222,53 @@ const AdminServersPage = () => {
     );
     setFilteredUnits(filtered);
   }, [unitSearch, units]);
+
+  const fetchEditUnitDetails = async (unitId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/units/${unitId}/docker-images`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Check if this is a v3 unit with multiple Docker images
+        if (data.dockerImages && Array.isArray(data.dockerImages) && data.dockerImages.length > 0) {
+          setEditUnitDockerImages(data.dockerImages);
+          setIsEditUnitV3(true);
+        } else {
+          // This is a v2 unit with a single Docker image
+          const unitData = units.find(u => u.id === unitId);
+          if (unitData) {
+            setEditUnitDockerImages([{ 
+              image: unitData.dockerImage, 
+              displayName: 'Default Image' 
+            }]);
+          } else {
+            setEditUnitDockerImages([]);
+          }
+          setIsEditUnitV3(false);
+        }
+      } else {
+        // Fallback to v2 behavior
+        const unitData = units.find(u => u.id === unitId);
+        if (unitData) {
+          setEditUnitDockerImages([{ 
+            image: unitData.dockerImage, 
+            displayName: 'Default Image' 
+          }]);
+        } else {
+          setEditUnitDockerImages([]);
+        }
+        setIsEditUnitV3(false);
+      }
+    } catch (error) {
+      console.error('Failed to fetch unit Docker images:', error);
+      setEditUnitDockerImages([]);
+      setIsEditUnitV3(false);
+    }
+  };
 
   // Function to fetch unit details including Docker images
   const fetchUnitDetails = async (unitId: string) => {
@@ -422,6 +481,16 @@ const AdminServersPage = () => {
       
       if (editFormData.cpuPercent !== selectedServer.cpuPercent) {
         changesOnly.cpuPercent = editFormData.cpuPercent;
+      }
+      
+      // V3: Add Docker image changes
+      if (editFormData.dockerImage !== selectedServer.status?.image) {
+        changesOnly.dockerImage = editFormData.dockerImage;
+      }
+      
+      // V3: Add startup command changes
+      if (editFormData.startupCommand !== selectedServer.status?.startup_command) {
+        changesOnly.startupCommand = editFormData.startupCommand;
       }
       
       // If nothing changed, just go back to view
@@ -885,13 +954,18 @@ const AdminServersPage = () => {
           />
           <select
             value={editFormData.unitId}
-            onChange={(e) => setEditFormData({ ...editFormData, unitId: e.target.value })}
+            onChange={(e) => setEditFormData({ 
+              ...editFormData, 
+              unitId: e.target.value,
+              // Clear Docker image when changing unit
+              dockerImage: ''
+            })}
             className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
             required
           >
             {filteredUnits.map(unit => (
               <option key={unit.id} value={unit.id}>
-                {unit.name} ({unit.shortName})
+                {unit.name} ({unit.shortName}) {unit.meta?.version === 'argon/unit:v3' ? '(v3)' : ''}
               </option>
             ))}
           </select>
@@ -903,6 +977,49 @@ const AdminServersPage = () => {
             </p>
           )}
         </div>
+        
+        {/* V3: Docker Image Selection */}
+        {isEditUnitV3 && editUnitDockerImages.length > 1 && (
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-700">
+              Docker Image
+            </label>
+            <select
+              value={editFormData.dockerImage || ''}
+              onChange={(e) => setEditFormData({ ...editFormData, dockerImage: e.target.value })}
+              className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
+            >
+              <option value="">Use unit default</option>
+              {editUnitDockerImages.map((img, idx) => (
+                <option key={idx} value={img.image}>
+                  {img.displayName} ({img.image})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Select a specific Docker image or use the unit's default.
+            </p>
+          </div>
+        )}
+        
+        {/* V3: Custom Startup Command */}
+        {isEditUnitV3 && (
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-700">
+              Startup Command
+            </label>
+            <input
+              type="text"
+              value={editFormData.startupCommand || ''}
+              onChange={(e) => setEditFormData({ ...editFormData, startupCommand: e.target.value })}
+              className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
+              placeholder="Leave blank to use unit default"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Customize the startup command or leave blank to use the unit's default.
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1">
@@ -969,7 +1086,7 @@ const AdminServersPage = () => {
             Cancel
           </button>
         </div>
-        </form>
+      </form>
     );
   };
 
@@ -998,24 +1115,28 @@ const AdminServersPage = () => {
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <button
-              onClick={() => {
-                // Initialize the edit form with current server values
-                setEditFormData({
-                  name: selectedServer.name,
-                  unitId: selectedServer.unitId,
-                  memoryMiB: selectedServer.memoryMiB,
-                  diskMiB: selectedServer.diskMiB,
-                  cpuPercent: selectedServer.cpuPercent
-                });
-                setFormError(null);
-                setView('edit');
-              }}
-              className="flex items-center px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
-            >
-              <PencilIcon className="w-3.5 h-3.5 mr-1.5" />
-              Edit
-            </button>
+   <button
+      onClick={() => {
+        // Initialize the edit form with current server values
+        setEditFormData({
+          name: selectedServer.name,
+          unitId: selectedServer.unitId,
+          memoryMiB: selectedServer.memoryMiB,
+          diskMiB: selectedServer.diskMiB,
+          cpuPercent: selectedServer.cpuPercent,
+          // V3: Add existing Docker image if available
+          dockerImage: selectedServer.status?.image || '',
+          // V3: Add existing startup command if available
+          startupCommand: selectedServer.status?.startup_command || ''
+        });
+        setFormError(null);
+        setView('edit');
+      }}
+      className="flex items-center px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+    >
+      <PencilIcon className="w-3.5 h-3.5 mr-1.5" />
+      Edit
+    </button>
             <button
               onClick={() => handleDelete(selectedServer.id)}
               className="flex items-center px-3 py-2 text-xs font-medium text-red-600 bg-white border border-gray-200 rounded-md hover:bg-red-50"
@@ -1055,6 +1176,18 @@ const AdminServersPage = () => {
                   </span>
                 </div>
               </div>
+              {selectedServer.status?.image && (
+                <div>
+                  <div className="text-xs text-gray-500">Docker Image</div>
+                  <div className="text-sm font-mono mt-1">{selectedServer.status?.image}</div>
+                </div>
+              )}
+              {selectedServer.status?.startup_command && (
+                <div>
+                  <div className="text-xs text-gray-500">Startup Command</div>
+                  <div className="text-sm font-mono mt-1">{selectedServer.status?.startup_command}</div>
+                </div>
+              )}
 
               <div className="pt-4 border-t border-gray-100">
                 <div className="text-xs font-medium text-gray-900 mb-3">Resources</div>
