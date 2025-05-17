@@ -47,20 +47,6 @@ app.get('/api/system', (req, res) => {
   });
 });
 
-const asciiPath = join(__dirname, '/', '_ascii.txt');
-if (existsSync(asciiPath)) {
-  const ascii = require('fs').readFileSync(asciiPath, 'utf-8');
-  const asciiGradient = gradient('FFFFFF', themeColors.text);
-  console.log(asciiGradient(ascii));
-  
-  console.log();
-} else {
-  console.log(chalk.hex(themeColors.error)('┌─────────────────────────────────────────┐'));
-  console.log(chalk.hex(themeColors.error)('│ ASCII art not found at ' + asciiPath.padEnd(34) + '│'));
-  console.log(chalk.hex(themeColors.error)('│ Please ensure the file exists and is readable. │'));
-  console.log(chalk.hex(themeColors.error)('└─────────────────────────────────────────┘'));
-}
-
 const frontendPath = resolve(__dirname, './app/dist');
 const indexPath = join(frontendPath, 'index.html');
 
@@ -73,9 +59,9 @@ if (frontendExists && indexExists) {
     if (req.path.startsWith('/api')) return;
     res.sendFile(indexPath);
   });
+  console.log(chalk.blueBright('frontend' + chalk.white(' build found at') + chalk.gray(` ${frontendPath.trim()}`)));
 } else {
-  console.log(chalk.hex(themeColors.warn)('⚠ Frontend build not detected at ' + frontendPath));
-  console.log(chalk.hex(themeColors.warn)('  Only API routes will be available'));
+  console.log(chalk.yellow('warning: frontend build not found, serving \'build not found\' page'));
   
   app.get('*', (req, res) => {
     if (req.path.startsWith('/api')) return;
@@ -114,25 +100,5 @@ if (frontendExists && indexExists) {
 
 // Start server
 app.listen(PORT, () => {
-  const serverUrl = `http://localhost:${PORT}`;
-  const boxWidth = Math.max(serverUrl.length + 24, 45);
-  
-  console.log(chalk.hex(themeColors.neutral)('╭' + '─'.repeat(boxWidth - 2) + '╮'));
-  
-  console.log(chalk.hex(themeColors.neutral)('│') + 
-              chalk.white(` Argon 0.8.0 (Matisse) `.padEnd(boxWidth - 2)) + 
-              chalk.hex(themeColors.neutral)('│'));
-              
-  console.log(chalk.hex(themeColors.neutral)('│') + ' '.repeat(boxWidth - 2) + chalk.hex(themeColors.neutral)('│'));
-  
-  console.log(chalk.hex(themeColors.neutral)('│') + 
-              gradient(themeColors.text, themeColors.text)(` Server: ${serverUrl} `.padEnd(boxWidth - 2)) + 
-              chalk.hex(themeColors.neutral)('│'));
-              
-  console.log(chalk.hex(themeColors.neutral)('│') + 
-              chalk.hex(themeColors.text)(` API routes available at /api/* `.padEnd(boxWidth - 2)) + 
-              chalk.hex(themeColors.neutral)('│'));
-  
-  console.log(chalk.hex(themeColors.neutral)('╰' + '─'.repeat(boxWidth - 2) + '╯'));
-  console.log();
+  console.log(chalk.red('https server') + ' listening on ' + chalk.cyan(`0.0.0.0:${PORT} `) + chalk.gray('(argon@0.8.0)'));
 });

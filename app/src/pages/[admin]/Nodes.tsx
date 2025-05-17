@@ -1021,7 +1021,7 @@ const AdminNodesPage = () => {
                         value={allocationFormData.alias || ''}
                         onChange={(e) => setAllocationFormData({ ...allocationFormData, alias: e.target.value })}
                         className="mt-1 block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
-                        placeholder="Primary game port"
+                        placeholder="node.example.com"
                       />
                     </div>
   

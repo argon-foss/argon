@@ -75,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const stateData = await stateResponse.json();
         setUser({ username, permissions: stateData.permissions });
-        navigate('/servers');
+        window.location.href = '/servers';
         return { success: true };
       } catch (error) {
         return { success: false, error: error instanceof Error ? error.message : 'An error occurred' };
