@@ -8,6 +8,7 @@ import { createServersRepository } from './db/servers';
 import { createCargoRepository } from './db/cargo';
 import { createProjectsRepository } from './db/projects';
 import { createRegionsRepository } from './db/regions';
+import { createApiKeysRepository } from './db/apiKeys';
 import chalk from 'chalk';
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
@@ -33,6 +34,7 @@ export class DB {
   readonly cargo;
   readonly projects;
   readonly regions;
+  readonly apiKeys;
 
   constructor(dbPath: string = 'argon.db') {
     this.db = new Database(dbPath);
@@ -66,13 +68,14 @@ export class DB {
       this.cargo = createCargoRepository(context);
       this.projects = createProjectsRepository(context);
       this.regions = createRegionsRepository(context);
+      this.apiKeys = createApiKeysRepository(context);
     }
   }
 
   private isSchemaValid(): boolean {
     const requiredTables = [
       'users', 'nodes', 'units', 'allocations', 'servers', 
-      'cargo', 'cargo_containers', 'unit_cargo_containers', 'projects', 'regions'
+      'cargo', 'cargo_containers', 'unit_cargo_containers', 'projects', 'regions', 'api_keys'
     ];
 
     const existingTables = this.db.query(`
@@ -90,7 +93,7 @@ export class DB {
     // Check if required tables exist
     const requiredTables = [
       'users', 'nodes', 'units', 'allocations', 'servers', 
-      'cargo', 'cargo_containers', 'unit_cargo_containers', 'projects', 'regions'
+      'cargo', 'cargo_containers', 'unit_cargo_containers', 'projects', 'regions', 'api_keys'
     ];
 
     const existingTables = this.db.query(`

@@ -2,6 +2,17 @@
 // @ts-ignore
 import { Database } from 'bun:sqlite';
 
+export interface ApiKey {
+  id: string;
+  name: string;
+  key: string;
+  userId: string;
+  permissions: string[];
+  lastUsed: Date | null;
+  expiresAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 export interface User {
   id: string;
   username: string;
