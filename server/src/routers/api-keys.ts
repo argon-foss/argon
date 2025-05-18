@@ -25,7 +25,7 @@ const updateApiKeySchema = z.object({
 
 // Helper function to generate a random API key
 function generateApiKey(length = 32): string {
-  return randomBytes(length).toString('hex');
+  return 'ARGX_' + randomBytes(length).toString('hex');
 }
 
 // Get all API keys for current user
