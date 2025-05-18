@@ -8,7 +8,7 @@ import { createServersRepository } from './db/servers';
 import { createCargoRepository } from './db/cargo';
 import { createProjectsRepository } from './db/projects';
 import { createRegionsRepository } from './db/regions';
-import { createApiKeysRepository } from './db/apiKeys';
+import { createApiKeysRepository } from './db/api-keys';
 import chalk from 'chalk';
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
