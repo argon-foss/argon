@@ -17,22 +17,9 @@ import { existsSync, statSync } from 'fs';
 import { loadRouters } from './utils/routes_loader';
 import { PORT } from './config';
 import chalk from 'chalk';
-import gradient from 'gradient-string';
 
 const app = express();
 const __dirname = process.cwd();
-
-// Theme colors
-const themeColors = {
-  primary: '#a2b3ff',
-  secondary: '#7c86ff',
-  success: '#a2ffb3',
-  info: '#a2d8ff',
-  warn: '#ffd6a2',
-  error: '#ffa2a2',
-  neutral: '#e2e2e2',
-  text: '#4a4a4a'
-};
 
 app.use(express.json());
 
@@ -42,12 +29,11 @@ app.use(loadRouters(routersDir));
 app.get('/api/system', (req, res) => {
   res.json({
     name: process.env.PANEL_NAME || 'Argon',
-    version: '1.0.0',
-    'powered-by': 'Argon'
+    version: '1.0.0'
   });
 });
 
-const frontendPath = resolve(__dirname, './app/dist');
+const frontendPath = resolve(__dirname, '../frontend/dist');
 const indexPath = join(frontendPath, 'index.html');
 
 const frontendExists = existsSync(frontendPath) && statSync(frontendPath).isDirectory();
