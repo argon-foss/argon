@@ -142,6 +142,21 @@ export function up(db: Database) {
       FOREIGN KEY (fallbackRegionId) REFERENCES regions(id) ON DELETE SET NULL
     );
 
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      key TEXT NOT NULL UNIQUE,
+      userId TEXT NOT NULL,
+      permissions TEXT NOT NULL,
+      lastUsed TEXT,
+      expiresAt TEXT,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL,
+      FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(userId);
+    CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys(key);
     CREATE INDEX IF NOT EXISTS idx_nodes_region_id ON nodes(regionId);
     CREATE INDEX IF NOT EXISTS idx_region_identifier ON regions(identifier);
     CREATE INDEX IF NOT EXISTS idx_servers_userid ON servers(userId);
