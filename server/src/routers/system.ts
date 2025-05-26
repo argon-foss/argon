@@ -3,7 +3,7 @@ import { db } from '../db';
 import { authMiddleware, checkPermission } from '../middleware/auth';
 import { Permissions } from '../permissions'; // Changed import from Permission to Permissions
 import { z } from 'zod';
-import { validateRequestBody } from '../middleware/validation';
+import { validateRequest } from '../middleware/validation';
 
 const router = Router();
 
@@ -15,7 +15,7 @@ router.put(
   '/system/settings',
   authMiddleware,
   checkPermission(Permissions.ADMIN), // Changed to Permissions.ADMIN
-  validateRequestBody(updateSettingsSchema),
+  validateRequest(updateSettingsSchema),
   async (req: Request, res: Response) => {
     const { panel_name } = req.body;
 
