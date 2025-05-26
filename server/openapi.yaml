@@ -1011,6 +1011,15 @@ components:
         description:
           type: string
           nullable: true
+    SettingsUpdate:
+      type: object
+      required:
+        - panel_name
+      properties:
+        panel_name:
+          type: string
+          minLength: 1
+          description: The display name for the panel
 security:
   - bearerAuth: []
   - apiKeyAuth: []
@@ -4510,3 +4519,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+/api/system/settings:
+  put:
+    summary: Update system settings
+    description: Update system settings such as panel name (admin only)
+    tags:
+      - System
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SettingsUpdate'
+    responses:
+      '200':
+        description: Settings updated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Panel name updated successfully
+      '400':
+        description: Invalid request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
+      '403':
+        description: Forbidden - Admin access required
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
+      '500':
+        description: Server error
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
