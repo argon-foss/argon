@@ -22,6 +22,7 @@ const AdminUsers = lazy(() => import('./pages/[admin]/Users'));
 const AdminCargo = lazy(() => import('./pages/[admin]/Cargo'));
 const AdminRegions = lazy(() => import('./pages/[admin]/Regions'));
 const AdminAPIKeys = lazy(() => import('./pages/[admin]/APIKeys'));
+const AdminSettings = lazy(() => import('./pages/[admin]/Settings')); // Import the new Settings page
 
 // Servers
 const ServerConsole = lazy(() => import('./pages/[server]/Console'));
@@ -296,6 +297,7 @@ function App() {
                         <Route path="/admin/cargo" element={<AdminCargo />} />
                         <Route path="/admin/regions" element={<AdminRegions />} />
                         <Route path="/admin/api-keys" element={<AdminAPIKeys />} />
+                        <Route path="/admin/settings" element={<AdminSettings />} /> {/* Add the new route */}
 
                         {/* Server routes */}
                         <Route
