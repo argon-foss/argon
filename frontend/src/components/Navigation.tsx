@@ -353,6 +353,14 @@ function Sidebar() {
               />
 
               <NavItem 
+                to="/admin/settings" 
+                icon={Cog6ToothIcon} 
+                label="Settings" 
+                isActive={location.pathname === '/admin/settings'}
+                setRef={setTabRef}
+              />
+
+              <NavItem 
                 to="/admin/api-keys" 
                 icon={KeyIcon} 
                 label="API Keys" 

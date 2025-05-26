@@ -26,11 +26,32 @@ app.use(express.json());
 const routersDir = join(__dirname, 'src', 'routers');
 app.use(loadRouters(routersDir));
 
-app.get('/api/system', (req, res) => {
-  res.json({
-    name: process.env.PANEL_NAME || 'Argon',
-    version: '1.0.0'
-  });
+// Import db instance
+import { db } from './db';
+
+app.get('/api/system', async (req, res) => { // Made async
+  try {
+    let panelName = 'Argon'; // Default name
+    const setting = db.db.query(
+      `SELECT value FROM system_settings WHERE key = 'panel_name'`
+    ).get() as { value: string } | undefined;
+
+    if (setting && setting.value) {
+      panelName = setting.value;
+    }
+
+    res.json({
+      name: panelName,
+      version: '1.0.0' // Assuming version remains static or managed elsewhere
+    });
+  } catch (error) {
+    console.error('Error fetching panel name:', error);
+    // Fallback to default name in case of error
+    res.json({
+      name: 'Argon',
+      version: '1.0.0'
+    });
+  }
 });
 
 const frontendPath = resolve(__dirname, '../frontend/dist');

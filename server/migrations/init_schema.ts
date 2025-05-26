@@ -155,6 +155,33 @@ export function up(db: Database) {
       FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
     );
 
+    -- System Settings Table
+    CREATE TABLE IF NOT EXISTS system_settings (
+      id TEXT PRIMARY KEY,
+      key TEXT UNIQUE NOT NULL,
+      value TEXT NOT NULL,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Seed default panel name
+    INSERT OR IGNORE INTO system_settings (id, key, value) 
+    VALUES (
+      '${crypto.randomUUID()}', 
+      'panel_name', 
+      'Argon'
+    );
+
+    -- Trigger for system_settings updatedAt
+    CREATE TRIGGER IF NOT EXISTS update_system_settings_updatedAt
+    AFTER UPDATE ON system_settings
+    FOR EACH ROW
+    BEGIN
+      UPDATE system_settings
+      SET updatedAt = datetime('now')
+      WHERE id = OLD.id;
+    END;
+
     CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(userId);
     CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys(key);
     CREATE INDEX IF NOT EXISTS idx_nodes_region_id ON nodes(regionId);
@@ -187,5 +214,7 @@ export function down(db: Database) {
     DROP TABLE IF EXISTS units;
     DROP TABLE IF EXISTS nodes;
     DROP TABLE IF EXISTS users;
+    DROP TABLE IF EXISTS system_settings; -- Added for down migration
+    DROP TRIGGER IF EXISTS update_system_settings_updatedAt; -- Added for down migration
   `);
 }
