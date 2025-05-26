@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useSystem } from '../../contexts/SystemContext'; // Adjust path as necessary
-import { ArrowLeftIcon } from 'lucide-react'; // Or any other icon library you're using
+import { useSystem } from '../../contexts/SystemContext';
 
 const AdminSettingsPage: React.FC = () => {
-  const { systemInfo, loading: systemLoading, error: systemError, updatePanelName } = useSystem(); // Added updatePanelName
+  const { systemInfo, loading: systemLoading, error: systemError, updatePanelName } = useSystem(); 
   const [panelName, setPanelName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -97,9 +96,9 @@ const AdminSettingsPage: React.FC = () => {
               <ArrowLeftIcon className="w-5 h-5 text-gray-600" />
             </button> */}
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">System Settings</h1>
+              <h1 className="text-lg font-semibold text-gray-900">Settings</h1>
               <p className="text-xs text-gray-500 mt-1">
-                Manage system-wide settings for your panel.
+                Manage settings for your panel.
               </p>
             </div>
           </div>
@@ -140,7 +139,6 @@ const AdminSettingsPage: React.FC = () => {
                 <button
                   type="submit"
                   className="px-4 py-2 text-xs font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 disabled:opacity-50"
-                  disabled={isLoading || !panelName.trim() || (systemInfo && panelName === systemInfo.name)}
                 >
                   {isLoading ? 'Saving...' : 'Save Settings'}
                 </button>

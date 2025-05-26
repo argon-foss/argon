@@ -123,7 +123,28 @@ export const AuthPage: React.FC = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [systemName, setSystemName] = useState('Argon'); // Default fallback
   const { login } = useAuth();
+
+  useEffect(() => {
+    // Fetch system information on component mount
+    const fetchSystemInfo = async () => {
+      try {
+        const response = await fetch('/api/system');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.name) {
+            setSystemName(data.name);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch system info:', error);
+        // Keep default "Argon" name if fetch fails
+      }
+    };
+
+    fetchSystemInfo();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,7 +163,7 @@ export const AuthPage: React.FC = () => {
       {/* Left panel */}
       <div className="w-2/5 bg-[#101219] p-10 flex flex-col justify-center">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-white">Argon</h1>
+          <h1 className="text-2xl font-semibold text-white">{systemName}</h1>
         </div>
         
         <div className="my-6">
@@ -159,7 +180,7 @@ export const AuthPage: React.FC = () => {
             to="https://github.com/argon-foss" 
             className="inline-flex items-center text-gray-500 hover:text-gray-300 border-b border-gray-500 pb-1"
           >
-            Powered by Argon
+            Powered by {systemName}
             <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>

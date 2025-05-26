@@ -1,15 +1,32 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
-import { useSystem } from '../contexts/SystemContext';
 
 export const usePageTitle = () => {
   const location = useLocation();
   const params = useParams();
-  const { systemInfo } = useSystem();
+  const [systemName, setSystemName] = useState('Argon'); // Default fallback
   
   useEffect(() => {
-    // Use the fetched system name or fall back to "Argon" if not available
-    const systemName = systemInfo?.name || 'Argon';
+    // Fetch system info directly
+    const fetchSystemName = async () => {
+      try {
+        const response = await fetch('/api/system');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.name) {
+            setSystemName(data.name);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch system info for title:', error);
+        // Keep default "Argon" name if fetch fails
+      }
+    };
+
+    fetchSystemName();
+  }, []); // Only fetch once when hook initializes
+
+  useEffect(() => {
     let title = systemName;
     const path = location.pathname;
     
@@ -37,5 +54,5 @@ export const usePageTitle = () => {
     }
     
     document.title = title;
-  }, [location, params, systemInfo]);
+  }, [location, params, systemName]); // Update title when route or systemName changes
 };
