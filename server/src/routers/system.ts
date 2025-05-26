@@ -12,7 +12,7 @@ const updateSettingsSchema = z.object({
 });
 
 router.put(
-  '/system/settings',
+  '/settings',
   authMiddleware,
   checkPermission(Permissions.ADMIN), // Changed to Permissions.ADMIN
   validateRequest(updateSettingsSchema),
