@@ -1118,4 +1118,264 @@ router.post('/:id/reinstall', checkPermission(Permissions.USER), async (req: any
   }
 });
 
+// SETTINGS/STARTUP
+
+// Update server name (user endpoint)
+router.patch('/:id/name', checkPermission(Permissions.USER), async (req: any, res) => {
+  try {
+    const server = await checkServerAccess(req, req.params.id);
+    
+    const schema = z.object({
+      name: z.string().min(1).max(100)
+    });
+    
+    const data = schema.parse(req.body);
+    
+    // Update server state to indicate it's updating
+    await updateServerState(server.id, 'updating');
+    
+    // Send update to daemon
+    await makeDaemonRequest(
+      'patch',
+      server.node,
+      `/api/v1/servers/${server.internalId}`,
+      {
+        serverId: server.internalId,
+        name: data.name,
+        memoryLimit: server.memoryMiB * 1024 * 1024,
+        cpuLimit: Math.floor(server.cpuPercent * 1024 / 100),
+        allocation: {
+          bindAddress: server.allocation.bindAddress,
+          port: server.allocation.port
+        }
+      }
+    );
+    
+    // Update the server in the database
+    const updatedServer = await db.servers.update(
+      { id: server.id },
+      { 
+        name: data.name,
+        state: 'running' // Reset state after update
+      }
+    );
+    
+    res.json({ 
+      name: updatedServer.name,
+      message: 'Server name updated successfully' 
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    if (error.message === 'Server not found') {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+    if (error.message === 'Access denied') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    console.error('Failed to update server name:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update server startup command (user endpoint)
+router.patch('/:id/startup-command', checkPermission(Permissions.USER), async (req: any, res) => {
+  try {
+    const server = await checkServerAccess(req, req.params.id);
+    
+    const schema = z.object({
+      startupCommand: z.string().min(1)
+    });
+    
+    const data = schema.parse(req.body);
+    
+    // Update server state to indicate it's updating
+    await updateServerState(server.id, 'updating');
+    
+    // Send update to daemon
+    await makeDaemonRequest(
+      'patch',
+      server.node,
+      `/api/v1/servers/${server.internalId}`,
+      {
+        serverId: server.internalId,
+        name: server.name,
+        memoryLimit: server.memoryMiB * 1024 * 1024,
+        cpuLimit: Math.floor(server.cpuPercent * 1024 / 100),
+        allocation: {
+          bindAddress: server.allocation.bindAddress,
+          port: server.allocation.port
+        },
+        startupCommand: data.startupCommand,
+        startupCommandChanged: true
+      }
+    );
+    
+    // Update the server in the database
+    const updatedServer = await db.servers.update(
+      { id: server.id },
+      { 
+        startupCommand: data.startupCommand,
+        state: 'running' // Reset state after update
+      }
+    );
+    
+    res.json({ 
+      startupCommand: updatedServer.startupCommand,
+      message: 'Startup command updated successfully' 
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    if (error.message === 'Server not found') {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+    if (error.message === 'Access denied') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    console.error('Failed to update server startup command:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update server Docker image (user endpoint)
+router.patch('/:id/docker-image', checkPermission(Permissions.USER), async (req: any, res) => {
+  try {
+    const server = await checkServerAccess(req, req.params.id);
+    
+    const schema = z.object({
+      dockerImage: z.string().min(1)
+    });
+    
+    const data = schema.parse(req.body);
+    
+    // Verify the Docker image is one of the available ones for this unit
+    const availableImages = server.unit.dockerImages || [];
+    if (availableImages.length > 0 && !availableImages.some(di => di.image === data.dockerImage)) {
+      return res.status(400).json({ 
+        error: 'Selected Docker image is not available for this unit',
+        availableImages: availableImages 
+      });
+    }
+    
+    // Update server state to indicate it's updating
+    await updateServerState(server.id, 'updating');
+    
+    // Send update to daemon
+    await makeDaemonRequest(
+      'patch',
+      server.node,
+      `/api/v1/servers/${server.internalId}`,
+      {
+        serverId: server.internalId,
+        name: server.name,
+        memoryLimit: server.memoryMiB * 1024 * 1024,
+        cpuLimit: Math.floor(server.cpuPercent * 1024 / 100),
+        allocation: {
+          bindAddress: server.allocation.bindAddress,
+          port: server.allocation.port
+        },
+        dockerImage: data.dockerImage,
+        dockerImageChanged: true
+      }
+    );
+    
+    // Update the server in the database
+    const updatedServer = await db.servers.update(
+      { id: server.id },
+      { 
+        dockerImage: data.dockerImage,
+        state: 'running' // Reset state after update
+      }
+    );
+    
+    res.json({ 
+      dockerImage: updatedServer.dockerImage,
+      message: 'Docker image updated successfully' 
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    if (error.message === 'Server not found') {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+    if (error.message === 'Access denied') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    console.error('Failed to update server Docker image:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get available Docker images for a server (user endpoint)
+router.get('/:id/docker-images', checkPermission(Permissions.USER), async (req: any, res) => {
+  try {
+    const server = await checkServerAccess(req, req.params.id);
+    
+    // Get available Docker images from the unit
+    const availableImages = server.unit.dockerImages || [];
+    const currentImage = server.dockerImage || server.unit.defaultDockerImage || server.unit.dockerImage;
+    
+    res.json({
+      availableImages: availableImages,
+      currentImage: currentImage
+    });
+  } catch (error) {
+    if (error.message === 'Server not found') {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+    if (error.message === 'Access denied') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    console.error('Failed to fetch server Docker images:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get server configuration details (user endpoint)
+router.get('/:id/configuration', checkPermission(Permissions.USER), async (req: any, res) => {
+  try {
+    const server = await checkServerAccess(req, req.params.id);
+    
+    // Get available Docker images from the unit
+    const availableImages = server.unit.dockerImages || [];
+    const currentImage = server.dockerImage || server.unit.defaultDockerImage || server.unit.dockerImage;
+    const defaultStartupCommand = server.unit.defaultStartupCommand;
+    const currentStartupCommand = server.startupCommand || defaultStartupCommand;
+    
+    // Check if startup command is user editable
+    const startup = server.unit.startup || { userEditable: false };
+    const isStartupEditable = startup.userEditable || false;
+    
+    res.json({
+      name: server.name,
+      dockerImage: {
+        current: currentImage,
+        available: availableImages,
+        canChange: availableImages.length > 1
+      },
+      startupCommand: {
+        current: currentStartupCommand,
+        default: defaultStartupCommand,
+        canEdit: isStartupEditable
+      },
+      memoryMiB: server.memoryMiB,
+      cpuPercent: server.cpuPercent,
+      state: server.state
+    });
+  } catch (error) {
+    if (error.message === 'Server not found') {
+      return res.status(404).json({ error: 'Server not found' });
+    }
+    if (error.message === 'Access denied') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    console.error('Failed to fetch server configuration:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;
