@@ -183,8 +183,8 @@ const ProjectSwitcher: React.FC<ProjectSwitcherProps> = ({ showOrganization = tr
                     className="px-2 py-1.5 hover:bg-gray-50 cursor-pointer flex items-center"
                     onClick={() => setIsOrgDropdownOpen(false)}
                   >
-                    <div className="h-5 w-5 bg-gray-800 rounded-md flex items-center justify-center mr-2">
-                      <span className="font-medium text-xs text-white">P</span>
+                    <div className="h-5 w-5 bg-gray-100 rounded-md flex items-center justify-center mr-2">
+                      <span className="font-medium text-xs text-gray-800">P</span>
                     </div>
                     <span className="text-sm text-gray-700">Personal</span>
                   </div>
