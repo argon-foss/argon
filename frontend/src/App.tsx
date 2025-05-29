@@ -27,6 +27,7 @@ const AdminSettings = lazy(() => import('./pages/[admin]/Settings')); // Import 
 // Servers
 const ServerConsole = lazy(() => import('./pages/[server]/Console'));
 const ServerFiles = lazy(() => import('./pages/[server]/Files'))
+const ServerSettings = lazy(() => import('./pages/[server]/Settings'));
 
 {/*
 
@@ -313,6 +314,14 @@ function App() {
                           element={
                             <ProtectedRoute>
                               <ServerFiles />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/servers/:id/settings"
+                          element={
+                            <ProtectedRoute>
+                              <ServerSettings />
                             </ProtectedRoute>
                           }
                         />
