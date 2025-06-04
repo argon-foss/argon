@@ -1169,7 +1169,7 @@ const AdminServersPage = () => {
               <div>
                 <div className="text-xs text-gray-500">Current State</div>
                 <div className="text-sm mt-1">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${selectedServer.state === 'running' ? 'bg-green-100 text-green-800' :
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${selectedServer.state === 'running' ? 'bg-green-100 text-green-800' :
                       selectedServer.state === 'updating' ? 'bg-yellow-100 text-yellow-800' :
                         selectedServer.state === 'stopping' ? 'bg-orange-100 text-orange-800' :
                           selectedServer.state === 'starting' ? 'bg-blue-100 text-blue-800' :

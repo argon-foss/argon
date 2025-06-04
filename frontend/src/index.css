@@ -151,3 +151,18 @@
 .animate-slide-in {
     animation: slide-in 0.2s ease-out forwards;
 }
+
+
+
+/* added this to remove the fucking scrolbar from navigation */
+
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    /* Internet Explorer 10+ */
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+    /* Safari and Chrome */ }

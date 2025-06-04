@@ -10,8 +10,9 @@ import {
   CheckIcon,
   ChevronLeftIcon,
   ChevronDownIcon,
-  ExclamationTriangleIcon
-} from '@heroicons/react/24/outline';
+  ExclamationTriangleIcon,
+  ArrowPathIcon
+} from "@heroicons/react/24/outline";
 
 interface SystemState {
   version: string;
@@ -121,7 +122,7 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
       {onDismiss && (
         <button
           onClick={onDismiss}
-          className={`ml-2 mr-2 p-1 ${textColor} hover:bg-opacity-10 cursor-pointer rounded-full`}
+          className={`ml-2 mr-2 p-1 ${textColor} hover:bg-opacity-10 cursor-pointer rounded-md`}
         >
           ×
         </button>
@@ -1178,7 +1179,7 @@ const AdminNodesPage = () => {
                   <div className="text-xs text-gray-500">Status</div>
                   <div className="flex items-center space-x-2 mt-1">
                     <div
-                      className={`h-2 w-2 rounded-full ${selectedNode.isOnline ? 'bg-green-400' : 'bg-gray-300'
+                      className={`h-2 w-2 rounded-md ${selectedNode.isOnline ? 'bg-green-400' : 'bg-gray-300'
                         }`}
                     />
                     <span className="text-sm">
@@ -1273,7 +1274,7 @@ const AdminNodesPage = () => {
                   <div className="flex items-center space-x-4">
                     <div className="flex-shrink-0">
                       <div
-                        className={`h-2 w-2 rounded-full ${server.status.state === 'running' ? 'bg-green-400' : 'bg-gray-300'
+                        className={`h-2 w-2 rounded-md ${server.status.state === 'running' ? 'bg-green-400' : 'bg-gray-300'
                           }`}
                       />
                     </div>
@@ -1405,9 +1406,6 @@ const AdminNodesPage = () => {
               <th className="p-3 text-left text-xs font-medium text-gray-600 tracking-wider cursor-pointer" onClick={() => handleTableSort('name')}>
                 <div className="flex items-center">
                   Name
-                  {tableSortField === 'name' && (
-                    <ChevronDownIcon className={`w-4 h-4 ml-1 ${tableSortDirection === 'desc' ? 'transform rotate-180' : ''}`} />
-                  )}
                 </div>
               </th>
               <th className="p-3 text-left text-xs font-medium text-gray-600 tracking-wider cursor-pointer" onClick={() => handleTableSort('fqdn')}>
@@ -1461,14 +1459,14 @@ const AdminNodesPage = () => {
                 >
                   <td className="p-3 text-xs text-gray-900">
                     <div className="flex items-center">
-                      <div className={`h-2 w-2 rounded-full ${node.isOnline ? 'bg-green-400' : 'bg-gray-300'} mr-2`} />
+                      <div className={`h-2 w-2 rounded-md ${node.isOnline ? 'bg-green-400' : 'bg-gray-300'} mr-2`} />
                       <span className="font-medium">{node.name}</span>
                     </div>
                   </td>
                   <td className="p-3 text-xs text-gray-500">{node.fqdn}</td>
                   <td className="p-3 text-xs text-gray-500">{node.port}</td>
                   <td className="p-3 text-xs">
-                    <span className={`px-2 py-1 rounded-full text-xs ${node.isOnline
+                    <span className={`px-2 py-1 rounded-md text-xs ${node.isOnline
                         ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-800'
                       }`}>
@@ -1547,7 +1545,7 @@ const AdminNodesPage = () => {
         {/* Global Alerts */}
         {alerts.length > 0 && (
           <div className="mb-4 space-y-2">
-            {alerts.map(alert => (
+            {alerts.map((alert) => (
               <Alert
                 key={alert.id}
                 type={alert.type}
@@ -1559,24 +1557,35 @@ const AdminNodesPage = () => {
         )}
 
         <div className="transition-all duration-200 ease-in-out">
-          {view === 'list' && (
+          {view === "list" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-lg font-semibold text-gray-900">Nodes</h1>
                   <p className="text-xs text-gray-500 mt-1">
-                    Nodes are where your servers run and live. Learn how to set up Argon's Krypton daemon via the <a href="https://docs.argon.io" target="_blank" rel="noreferrer" className="text-indigo-500 hover:underline">documentation</a>.
+                    Nodes are where your servers run and live. Learn how to set
+                    up Argon's Krypton daemon via the{" "}
+                    <a
+                      href="https://docs.argon.io"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-indigo-500 hover:underline"
+                    >
+                      documentation
+                    </a>
+                    .
                   </p>
                 </div>
                 <div className="flex space-x-3">
                   <button
                     onClick={fetchData}
-                    className="flex items-center px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+                    className="flex items-center px-4 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors duration-150"
                   >
+                    <ArrowPathIcon className="h-4 w-4 mr-2" />
                     Refresh
                   </button>
                   <button
-                    onClick={() => setView('create')}
+                    onClick={() => setView("create")}
                     className="flex items-center px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800"
                   >
                     <PlusIcon className="w-3.5 h-3.5 mr-1.5" />
@@ -1591,12 +1600,12 @@ const AdminNodesPage = () => {
             </div>
           )}
 
-          {view === 'create' && (
+          {view === "create" && (
             <div className="space-y-6">
               <div className="flex items-center space-x-4">
                 <button
                   onClick={() => {
-                    setView('list');
+                    setView("list");
                     setSelectedNode(null);
                   }}
                   className="flex items-center text-gray-600 hover:bg-gray-100 p-2 cursor-pointer rounded-md transition hover:text-gray-900"
@@ -1604,16 +1613,18 @@ const AdminNodesPage = () => {
                   <ArrowLeftIcon className="w-4 h-4" />
                 </button>
                 <div>
-                  <h1 className="text-lg font-semibold text-gray-900">Create Node</h1>
+                  <h1 className="text-lg font-semibold text-gray-900">
+                    Create Node
+                  </h1>
                 </div>
               </div>
-              {renderForm('create')}
+              {renderForm("create")}
             </div>
           )}
 
-          {view === 'edit' && renderForm('edit')}
+          {view === "edit" && renderForm("edit")}
 
-          {view === 'view' && renderNodeView()}
+          {view === "view" && renderNodeView()}
         </div>
       </div>
     </div>

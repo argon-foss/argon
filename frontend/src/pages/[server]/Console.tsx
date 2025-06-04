@@ -40,6 +40,14 @@ interface ServerDetails {
   validationToken: string;
   node: Node;
   status: ServerStatus;
+  unit?: {
+    features?: string;
+    startup?: {
+      stopCommand?: string;
+      readyRegex?: string;
+      userEditable?: boolean;
+    };
+  };
 }
 
 interface ConsoleMessage {
@@ -84,6 +92,7 @@ const ServerConsolePage = () => {
   const [powerLoading, setPowerLoading] = useState(false);
   const [nodeDown, setNodeDown] = useState(false);
   const [connectionAttempts, setConnectionAttempts] = useState(0);
+  const [stopCommandSent, setStopCommandSent] = useState(false); // New state to track stop command
   const MAX_CONNECTION_ATTEMPTS = 3;
   const [liveStats, setLiveStats] = useState<{
     cpuPercent: number;
@@ -94,9 +103,76 @@ const ServerConsolePage = () => {
     memory: { used: 0, limit: 0, percent: 0 },
     network: { rxBytes: 0, txBytes: 0 }
   });
+  const [showEulaModal, setShowEulaModal] = useState(false);
+  const [eulaAccepting, setEulaAccepting] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
   const consoleRef = useRef<HTMLDivElement>(null);
+
+  // Parse features from server unit data
+  const getServerFeatures = () => {
+    try {
+      return server?.unit?.features ? JSON.parse(server.unit.features) : [];
+    } catch (error) {
+      console.error('Failed to parse server features:', error);
+      return [];
+    }
+  };
+
+  // Check if EULA acceptance is required
+  const requiresEulaAcceptance = () => {
+    const features = getServerFeatures();
+    return features.some((feature: any) => feature.name === 'eula-agreement' && feature.type === 'required');
+  };
+
+  // Handle EULA acceptance
+  const handleEulaAcceptance = async () => {
+    if (!server || eulaAccepting) return;
+    
+    setEulaAccepting(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      // Write eula=true to eula.txt using the filesystem API
+      const response = await fetch(`http://${server.node.fqdn}:${server.node.port}/api/v1/filesystem/${server.internalId}/write/eula.txt`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${server.validationToken}`,
+          'Content-Type': 'text/plain'
+        },
+        body: 'eula=true'
+      });
+
+      // Kill the server
+      if (wsRef.current) {
+        // Send kill power action
+        wsRef.current.send(JSON.stringify({
+          event: 'power_action',
+          data: { action: 'kill' }
+        }));
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to write EULA file: ${response.status}`);
+      }
+
+      setMessages(prev => [...prev, '\x1b[32m[System] EULA accepted successfully. You can now start the server.\x1b[0m']);
+      setShowEulaModal(false);
+    } catch (error) {
+      console.error('Failed to accept EULA:', error);
+      setMessages(prev => [
+        ...prev,
+        `\x1b[31m[System] Failed to accept EULA: ${
+          error instanceof Error ? error.message : String(error)
+        }\x1b[0m`
+      ]);
+    } finally {
+      setEulaAccepting(false);
+    }
+  };
 
   useEffect(() => {
     const fetchServer = async () => {
@@ -217,6 +293,24 @@ const ServerConsolePage = () => {
         switch (message.event) {
           case 'console_output':
             if (typeof message.data.message === 'string') {
+              // Check for EULA requirement message
+              const hasEulaMessage = message.data.message.includes('You need to agree to the EULA in order to run the server');
+              const requiresEula = true; // requiresEulaAcceptance();
+              const modalNotShown = !showEulaModal;
+              
+              console.log('EULA Check:', { 
+                hasEulaMessage, 
+                requiresEula, 
+                modalNotShown, 
+                features: getServerFeatures(),
+                message: message.data.message 
+              });
+              
+              if (hasEulaMessage && requiresEula && modalNotShown) {
+                console.log('Showing EULA modal');
+                setShowEulaModal(true);
+              }
+              
               // @ts-ignore
               setMessages(prev => [...prev, message.data.message]);
             }
@@ -240,7 +334,13 @@ const ServerConsolePage = () => {
             }
             
             if (message.data.state) {
-              setServer(prev => prev ? { ...prev, state: message.data.state || prev.state } : null);
+              const newState = message.data.state;
+              setServer(prev => prev ? { ...prev, state: newState || prev.state } : null);
+              
+              // Reset stopCommandSent when server reaches stopped state
+              if (newState?.toLowerCase() === 'stopped') {
+                setStopCommandSent(false);
+              }
             }
             break;
           
@@ -341,10 +441,40 @@ const ServerConsolePage = () => {
     }
   };
   
-  const handlePowerAction = async (action: 'start' | 'stop' | 'restart') => {
+  // Handle stop command (using server's configured stop command)
+  const handleStopCommand = () => {
+    if (!server || !wsRef.current || !isServerActive) return;
+    
+    const stopCommand = server.unit?.startup?.stopCommand || 'stop';
+    
+    try {
+      wsRef.current.send(JSON.stringify({
+        event: 'send_command',
+        data: stopCommand
+      }));
+
+      // Set the flag to show kill button during stop process
+      setStopCommandSent(true);
+
+      // Log the stop command
+      setMessages(prev => [...prev, `\x1b[33m[System] Sending stop command: ${stopCommand}\x1b[0m`]);
+    } catch (error) {
+      setMessages(prev => [...prev, `\x1b[31m[System] Failed to send stop command: ${error}\x1b[0m`]);
+      // Reset the flag if there was an error
+      setStopCommandSent(false);
+    }
+  };
+
+  const handlePowerAction = async (action: 'start' | 'restart' | 'kill') => {
     if (!server || powerLoading || !wsRef.current) return;
     
     setPowerLoading(true);
+    
+    // Reset stop command sent flag when performing any power action
+    if (action === 'kill' || action === 'start') {
+      setStopCommandSent(false);
+    }
+    
     try {
       wsRef.current.send(JSON.stringify({
         event: 'power_action',
@@ -419,7 +549,7 @@ const ServerConsolePage = () => {
   let allocation = server?.status?.allocation ? JSON.parse(server.status.allocation) : null;
 
   return (
-    <div className="min-h-screen px-8 py-8 bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1500px] mx-auto p-4 space-y-6">
         {/* Header Section */}
         <div className="space-y-3">
@@ -450,30 +580,47 @@ const ServerConsolePage = () => {
                 <button
                   onClick={() => handlePowerAction('start')}
                   disabled={powerLoading || isServerActive || !connected}
-                  className="flex items-center px-4 py-4 cursor-pointer text-xs font-medium text-gray-700
-                           bg-white border border-gray-200 rounded-xl 
+                  className="flex items-center px-3 py-2 cursor-pointer text-xs font-medium text-gray-700
+                           bg-white border border-gray-200 rounded-lg 
                            hover:bg-gray-50 disabled:opacity-50 transition-all duration-200"
                 >
-                  <Play className="w-4 h-4 text-gray-700" />
+                  <Play className="w-4 h-4 text-gray-700 mr-2" />
+                  Start
                 </button>
                 <button
                   onClick={() => handlePowerAction('restart')}
                   disabled={powerLoading || !isServerActive || !connected}
-                  className="flex items-center px-4 py-4 cursor-pointer text-xs font-medium text-gray-700
-                           bg-white border border-gray-200 rounded-xl 
+                  className="flex items-center px-3 py-2 cursor-pointer text-xs font-medium text-gray-700
+                           bg-white border border-gray-200 rounded-lg 
                            hover:bg-gray-50 disabled:opacity-50 transition-all duration-200"
                 >
-                  <RefreshCw className="w-4 h-4 text-gray-700" />
+                  <RefreshCw className="w-4 h-4 text-gray-700 mr-2" />
+                  Restart
                 </button>
                 <button
-                  onClick={() => handlePowerAction('stop')}
-                  disabled={powerLoading || !isServerActive || !connected}
-                  className="flex items-center px-4 py-4 cursor-pointer text-xs font-medium text-gray-700
-                           bg-white border border-gray-200 rounded-xl 
+                  onClick={handleStopCommand}
+                  disabled={!isServerActive || !connected}
+                  className="flex items-center px-3 py-2 cursor-pointer text-xs font-medium text-gray-700
+                           bg-white border border-gray-200 rounded-lg 
                            hover:bg-gray-50 disabled:opacity-50 transition-all duration-200"
                 >
-                  <Square className="w-4 h-4 text-gray-700" />
+                  <Square className="w-4 h-4 text-gray-700 mr-2" />
+                  Stop
                 </button>
+                {/* Kill button - shown during power operations, restarting state, or when stop command has been sent */}
+                {(powerLoading || 
+                  server?.state?.toLowerCase() === 'restarting' || 
+                  (stopCommandSent && isServerActive)) && (
+                  <button
+                    onClick={() => handlePowerAction('kill')}
+                    className="flex items-center px-3 py-2 cursor-pointer text-xs font-medium text-white
+                             bg-red-600 border border-red-600 rounded-lg 
+                             hover:bg-red-700 transition-all duration-200"
+                  >
+                    <Square className="w-4 h-4 text-white mr-2" />
+                    Kill
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -613,6 +760,56 @@ const ServerConsolePage = () => {
             </form>
           </div>
         </div>
+
+        {/* EULA Acceptance Modal */}
+        {showEulaModal && (
+          <div className="fixed inset-0 bg-gray-100 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="p-6 max-w-md w-full mx-4">
+              <div className="flex items-center mb-4">
+                <AlertCircle className="w-6 h-6 text-amber-500 mr-3" />
+                <h3 className="text-lg font-semibold text-gray-900">EULA Agreement Required</h3>
+              </div>
+              
+              <p className="text-gray-600 text-sm mb-6 mt-2">
+                Your server requires acceptance of the Minecraft End User License Agreement (EULA) before it can start.
+              </p>
+              
+              <div className="bg-gray-50 rounded-md p-3 mb-4">
+                <p className="text-xs text-gray-700 leading-relaxed">
+                  By accepting, you agree to the{' '}
+                  <a 
+                    href="https://www.minecraft.net/en-us/eula" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-indigo-600 hover:text-indigo-700"
+                  >
+                    Minecraft End User License Agreement&nbsp;
+                  </a>
+                    and acknowledge that you have read and understood it.
+                </p>
+              </div>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowEulaModal(false)}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 
+                           border cursor-pointer border-gray-300 rounded-md hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEulaAcceptance}
+                  disabled={eulaAccepting}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gray-800 
+                           cursor-pointer border border-gray-800 rounded-md hover:bg-gray-700 
+                           disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {eulaAccepting ? 'Accepting...' : 'Accept EULA'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

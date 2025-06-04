@@ -1,170 +1,136 @@
 import React from 'react';
 
-const ANSI_COLORS: Record<string, Record<number, string>> = {
-    light: {
-        0: '#000000', // Black
-        1: '#d16969', // Red
-        2: '#b5cea8', // Green
-        3: '#d7ba7d', // Yellow
-        4: '#569cd6', // Blue
-        5: '#c586c0', // Magenta
-        6: '#9cdcfe', // Cyan
-        7: '#d4d4d4', // White
-        // Bright variants
-        8: '#808080',  // Bright Black
-        9: '#d16969',  // Bright Red
-        10: '#b5cea8', // Bright Green
-        11: '#d7ba7d', // Bright Yellow
-        12: '#569cd6', // Bright Blue
-        13: '#c586c0', // Bright Magenta
-        14: '#9cdcfe', // Bright Cyan
-        15: '#ffffff'  // Bright White
-    },
-    dark: {
-        0: '#666666', // Black (lightened for dark mode)
-        1: '#ff6b6b', // Red
-        2: '#c2e085', // Green
-        3: '#ffd700', // Yellow
-        4: '#7cb7ff', // Blue
-        5: '#ff8ae2', // Magenta
-        6: '#79eeff', // Cyan
-        7: '#ffffff', // White
-        // Bright variants
-        8: '#999999',  // Bright Black
-        9: '#ff8080',  // Bright Red
-        10: '#d4ff80', // Bright Green
-        11: '#ffed80', // Bright Yellow
-        12: '#80caff', // Bright Blue
-        13: '#ff99ff', // Bright Magenta
-        14: '#80ffff', // Bright Cyan
-        15: '#ffffff'  // Bright White
-    }
-};
+// Standard ANSI colors - simplified and more readable
+const ANSI_COLORS = [
+  '#000000', '#d16969', '#b5cea8', '#d7ba7d', 
+  '#569cd6', '#c586c0', '#9cdcfe', '#d4d4d4',
+  '#808080', '#ff6b6b', '#c2e085', '#ffd700',
+  '#7cb7ff', '#ff8ae2', '#79eeff', '#ffffff'
+] as const;
+
+interface AnsiStyle {
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  color?: string;
+  backgroundColor?: string;
+}
+
+interface AnsiSpan {
+  text: string;
+  style: AnsiStyle;
+}
 
 interface AnsiParserProps {
-    text: string;
+  text: string;
+  className?: string;
 }
 
-interface SpanStyle {
-    fontWeight?: 'bold';
-    fontStyle?: 'italic';
-    textDecoration?: 'underline';
-    color?: string;
-    backgroundColor?: string;
-}
+const AnsiParser: React.FC<AnsiParserProps> = ({ text, className = '' }) => {
+  const parseAnsi = (input: string): AnsiSpan[] => {
+    const spans: AnsiSpan[] = [];
+    let currentStyle: AnsiStyle = {};
+    let currentText = '';
+    let i = 0;
 
-interface Span {
-    text: string;
-    style: SpanStyle;
-}
-
-const AnsiParser: React.FC<AnsiParserProps> = ({ text }) => {
-    const parseAnsi = (input: string): Span[] => {
-        const result: Span[] = [];
-        let currentSpan: Span = { text: '', style: {} };
-        let position = 0;
-
-        while (position < input.length) {
-            if (input[position] === '\u001b' && input[position + 1] === '[') {
-                // If we have accumulated any text, push it
-                if (currentSpan.text) {
-                    result.push({ ...currentSpan });
-                    currentSpan = { text: '', style: { ...currentSpan.style } };
-                }
-
-                position += 2; // Skip the escape sequence start
-                let code = '';
-                
-                // Collect all numbers until 'm'
-                while (position < input.length && input[position] !== 'm') {
-                    code += input[position];
-                    position++;
-                }
-                position++; // Skip the 'm'
-
-                // Process the code
-                const codes = code.split(';').map(Number);
-                for (let i = 0; i < codes.length; i++) {
-                    const code = codes[i];
-                    
-                    if (code === 0) {
-                        // Reset
-                        currentSpan.style = {};
-                    } else if (code === 1) {
-                        // Bold
-                        currentSpan.style.fontWeight = 'bold';
-                    } else if (code === 3) {
-                        // Italic
-                        currentSpan.style.fontStyle = 'italic';
-                    } else if (code === 4) {
-                        // Underline
-                        currentSpan.style.textDecoration = 'underline';
-                    } else if (code >= 30 && code <= 37) {
-                        // Foreground color - support both modes
-                        currentSpan.style.color = `var(--ansi-${code - 30})`;
-                    } else if (code >= 90 && code <= 97) {
-                        // Bright foreground color
-                        currentSpan.style.color = `var(--ansi-${code - 82})`;
-                    } else if (code >= 40 && code <= 47) {
-                        // Background color
-                        currentSpan.style.backgroundColor = `var(--ansi-bg-${code - 40})`;
-                    } else if (code >= 100 && code <= 107) {
-                        // Bright background color
-                        currentSpan.style.backgroundColor = `var(--ansi-bg-${code - 92})`;
-                    }
-                }
-            } else {
-                currentSpan.text += input[position];
-                position++;
-            }
-        }
-
-        // Push any remaining text
-        if (currentSpan.text) {
-            result.push(currentSpan);
-        }
-
-        return result;
+    const pushSpan = () => {
+      if (currentText) {
+        spans.push({ text: currentText, style: { ...currentStyle } });
+        currentText = '';
+      }
     };
 
-    const spans = parseAnsi(text);
+    while (i < input.length) {
+      // Check for ANSI escape sequence
+      if (input[i] === '\x1b' && input[i + 1] === '[') {
+        pushSpan();
+        
+        i += 2; // Skip \x1b[
+        let code = '';
+        
+        // Read until 'm'
+        while (i < input.length && input[i] !== 'm') {
+          code += input[i++];
+        }
+        i++; // Skip 'm'
 
-    return (
-        <div className="font-mono leading-5 whitespace-pre-wrap text-gray-100 dark:text-gray-200">
-            <style>
-                {`
-                    :root {
-                        /* Light mode ANSI colors */
-                        ${Object.entries(ANSI_COLORS.light).map(([key, value]) => `
-                            .light-theme {
-                                --ansi-${key}: ${value};
-                                --ansi-bg-${key}: ${value}20;
-                            }
-                        `).join('\n')}
+        // Apply codes
+        const codes = code.split(';').map(Number).filter(n => !isNaN(n));
+        
+        for (const num of codes) {
+          currentStyle = applyAnsiCode(currentStyle, num);
+        }
+      } else {
+        currentText += input[i++];
+      }
+    }
 
-                        /* Dark mode ANSI colors */
-                        ${Object.entries(ANSI_COLORS.dark).map(([key, value]) => `
-                            .dark-theme {
-                                --ansi-${key}: ${value};
-                                --ansi-bg-${key}: ${value}20;
-                            }
-                        `).join('\n')}
-                    }
-                `}
-            </style>
-            {spans.map((span, index) => (
-                <span 
-                    key={index} 
-                    style={{ 
-                        ...span.style, 
-                        fontFamily: 'JetBrains Mono',
-                    }}
-                >
-                    {span.text}
-                </span>
-            ))}
-        </div>
-    );
+    pushSpan();
+    return spans;
+  };
+
+  const applyAnsiCode = (style: AnsiStyle, code: number): AnsiStyle => {
+    const newStyle = { ...style };
+
+    switch (code) {
+      case 0: // Reset
+        return {};
+      case 1: // Bold
+        newStyle.bold = true;
+        break;
+      case 3: // Italic
+        newStyle.italic = true;
+        break;
+      case 4: // Underline
+        newStyle.underline = true;
+        break;
+      case 22: // Normal intensity
+        delete newStyle.bold;
+        break;
+      case 23: // Not italic
+        delete newStyle.italic;
+        break;
+      case 24: // Not underlined
+        delete newStyle.underline;
+        break;
+      default:
+        // Foreground colors (30-37, 90-97)
+        if (code >= 30 && code <= 37) {
+          newStyle.color = ANSI_COLORS[code - 30];
+        } else if (code >= 90 && code <= 97) {
+          newStyle.color = ANSI_COLORS[code - 90 + 8];
+        }
+        // Background colors (40-47, 100-107)
+        else if (code >= 40 && code <= 47) {
+          newStyle.backgroundColor = ANSI_COLORS[code - 40];
+        } else if (code >= 100 && code <= 107) {
+          newStyle.backgroundColor = ANSI_COLORS[code - 100 + 8];
+        }
+        break;
+    }
+
+    return newStyle;
+  };
+
+  const getSpanStyle = (style: AnsiStyle): React.CSSProperties => ({
+    fontWeight: style.bold ? 'bold' : 'normal',
+    fontStyle: style.italic ? 'italic' : 'normal',
+    textDecoration: style.underline ? 'underline' : 'none',
+    color: style.color,
+    backgroundColor: style.backgroundColor,
+  });
+
+  const spans = parseAnsi(text);
+
+  return (
+    <pre className={`font-mono text-sm leading-relaxed whitespace-pre-wrap ${className}`}>
+      {spans.map((span, index) => (
+        <span key={index} style={getSpanStyle(span.style)}>
+          {span.text}
+        </span>
+      ))}
+    </pre>
+  );
 };
 
 export default AnsiParser;

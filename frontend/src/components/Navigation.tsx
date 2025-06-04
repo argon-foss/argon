@@ -330,6 +330,45 @@ function Sidebar() {
             setRef={setTabRef}
           />
 
+          {/* Server Section - Only show when on a server page */}
+          {isServerPage && (
+            <>
+              <SectionHeader label="Server" />
+
+              <NavItem
+                to={`/servers/${serverId}/console`}
+                icon={CommandLineIcon}
+                label="Console"
+                isActive={location.pathname.endsWith('/console')}
+                setRef={setTabRef}
+              />
+
+              <NavItem
+                to={`/servers/${serverId}/files`}
+                icon={FolderIcon}
+                label="Files"
+                isActive={location.pathname.endsWith('/files')}
+                setRef={setTabRef}
+              />
+
+              <NavItem
+                to={`/servers/${serverId}/startup`}
+                icon={AdjustmentsHorizontalIcon}
+                label="Startup"
+                isActive={location.pathname.endsWith('/startup')}
+                setRef={setTabRef}
+              />
+
+              <NavItem
+                to={`/servers/${serverId}/settings`}
+                icon={Cog6ToothIcon}
+                label="Settings"
+                isActive={location.pathname.endsWith('/settings')}
+                setRef={setTabRef}
+              />
+            </>
+          )}
+          
           {/* Admin Section - Only show if user has admin permissions */}
           {hasAdminPermission && (
             <>
@@ -404,45 +443,6 @@ function Sidebar() {
                 icon={ArrowsPointingOutIcon}
                 label="Cargo"
                 isActive={location.pathname === '/admin/cargo'}
-                setRef={setTabRef}
-              />
-            </>
-          )}
-
-          {/* Server Section - Only show when on a server page */}
-          {isServerPage && (
-            <>
-              <SectionHeader label="Server" />
-
-              <NavItem
-                to={`/servers/${serverId}/console`}
-                icon={CommandLineIcon}
-                label="Console"
-                isActive={location.pathname.endsWith('/console')}
-                setRef={setTabRef}
-              />
-
-              <NavItem
-                to={`/servers/${serverId}/files`}
-                icon={FolderIcon}
-                label="Files"
-                isActive={location.pathname.endsWith('/files')}
-                setRef={setTabRef}
-              />
-
-              <NavItem
-                to={`/servers/${serverId}/startup`}
-                icon={AdjustmentsHorizontalIcon}
-                label="Startup"
-                isActive={location.pathname.endsWith('/startup')}
-                setRef={setTabRef}
-              />
-
-              <NavItem
-                to={`/servers/${serverId}/settings`}
-                icon={Cog6ToothIcon}
-                label="Settings"
-                isActive={location.pathname.endsWith('/settings')}
                 setRef={setTabRef}
               />
             </>

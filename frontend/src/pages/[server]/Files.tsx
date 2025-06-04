@@ -11,7 +11,6 @@ import {
   FilePlus, Package, Code, FileText, Image, 
   Music, Video, PackageOpen, Save, Move
 } from 'lucide-react';
-import LoadingSpinner from '../../components/LoadingSpinner';
 
 // Types
 interface Node {
@@ -1220,7 +1219,7 @@ const FileManager: React.FC = () => {
         {/* File List */}
         {loading ? (
           <div className="flex items-center justify-center h-[400px]">
-            <LoadingSpinner />
+            <span className="text-gray-500">Loading file ...</span>
           </div>
         ) : (
           <motion.div 
