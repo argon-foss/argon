@@ -39,13 +39,13 @@ interface TooltipProps {
   position?: 'top' | 'right' | 'bottom' | 'left';
 }
 
-const Tooltip: React.FC<TooltipProps> = ({ 
-  children, 
-  content, 
-  position = 'right' 
+const Tooltip: React.FC<TooltipProps> = ({
+  children,
+  content,
+  position = 'right'
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-  
+
   // Updated position classes with higher z-index and adjusted positioning
   const positionClasses = {
     top: "fixed transform -translate-x-1/2 -translate-y-full mt-[-8px]",
@@ -56,15 +56,15 @@ const Tooltip: React.FC<TooltipProps> = ({
 
   const tooltipRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   // Calculate tooltip position on hover
   useEffect(() => {
     if (isVisible && containerRef.current && tooltipRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      
+
       let top: number;
       let left: number;
-      
+
       switch (position) {
         case 'top':
           left = rect.left + rect.width / 2;
@@ -86,22 +86,22 @@ const Tooltip: React.FC<TooltipProps> = ({
           left = rect.right;
           top = rect.top + rect.height / 2;
       }
-      
+
       tooltipRef.current.style.left = `${left}px`;
       tooltipRef.current.style.top = `${top}px`;
     }
   }, [isVisible, position]);
-  
+
   return (
-    <div 
-      className="relative inline-block" 
+    <div
+      className="relative inline-block"
       ref={containerRef}
       onMouseEnter={() => setIsVisible(true)}
       onMouseLeave={() => setIsVisible(false)}
     >
       {children}
       {isVisible && (
-        <div 
+        <div
           ref={tooltipRef}
           className={`${positionClasses[position]} z-[999]`}
         >
@@ -125,7 +125,7 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
   const bgColor = type === 'error' ? 'bg-red-50' : type === 'success' ? 'bg-green-50' : 'bg-yellow-50';
   const textColor = type === 'error' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-yellow-600';
   const borderColor = type === 'error' ? 'border-red-100' : type === 'success' ? 'border-green-100' : 'border-yellow-100';
-  
+
   return (
     <div className={`${bgColor} border ${borderColor} rounded-md flex items-start justify-between mb-4`}>
       <div className="flex items-start p-3">
@@ -157,27 +157,27 @@ interface DropdownMenuProps {
 
 const DropdownMenu: React.FC<DropdownMenuProps> = ({ children, isOpen, onClose }) => {
   const menuRef = useRef<HTMLDivElement>(null);
-  
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && event.target instanceof Node && !menuRef.current.contains(event.target)) {
         onClose();
       }
     };
-    
+
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-    
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen, onClose]);
-  
+
   if (!isOpen) return null;
-  
+
   return (
-    <div 
+    <div
       ref={menuRef}
       className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden transform transition-all duration-150 ease-spring origin-top-right z-20 animate-scale-in"
     >
@@ -194,11 +194,11 @@ interface MenuItemProps {
   disabled?: boolean;
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({ 
-  icon: Icon, 
-  label, 
-  onClick, 
-  disabled = false 
+const MenuItem: React.FC<MenuItemProps> = ({
+  icon: Icon,
+  label,
+  onClick,
+  disabled = false
 }) => {
   return (
     <button
@@ -235,7 +235,7 @@ const ServerProjectPicker: React.FC<ServerProjectPickerProps> = ({
           className="p-1.5 rounded-md hover:bg-gray-100 active:bg-gray-200 transition-colors mr-2"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
+            <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </button>
         <span className="text-sm font-medium text-gray-700">Move to project</span>
@@ -247,8 +247,8 @@ const ServerProjectPicker: React.FC<ServerProjectPickerProps> = ({
             onClick={() => onProjectSelect(project.id)}
             disabled={project.id === server.projectId}
             className={`w-full text-left px-4 py-2.5 text-sm transition-colors duration-150 flex items-center
-              ${project.id === server.projectId 
-                ? 'text-gray-400 cursor-not-allowed bg-gray-50' 
+              ${project.id === server.projectId
+                ? 'text-gray-400 cursor-not-allowed bg-gray-50'
                 : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'}`}
           >
             <span>{project.name}</span>
@@ -281,7 +281,7 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [nodeWarnings, setNodeWarnings] = useState<boolean>(false);
-  
+
   console.log(isSubmitting);
 
   // State for tab indicator animation
@@ -292,27 +292,27 @@ export default function Home() {
     left: 0,
     opacity: 0,
   });
-  
+
   // Refs for tab buttons
   const tabRefsMap = useRef<Record<string, HTMLButtonElement | null>>({});
   const tabsContainerRef = useRef<HTMLDivElement>(null);
-  
+
   // Set ref for tab button
   const setTabRef = useCallback((id: string, element: HTMLButtonElement | null) => {
     tabRefsMap.current[id] = element;
   }, []);
-  
+
   // Update indicator position when active tab changes
   useEffect(() => {
     const updateIndicator = () => {
       const tabElement = tabRefsMap.current[activeTab];
       if (!tabElement || !tabsContainerRef.current) return;
-      
+
       const rect = tabElement.getBoundingClientRect();
       const containerRect = tabsContainerRef.current.getBoundingClientRect();
-      
+
       const offsetLeft = rect.left - containerRect.left;
-      
+
       setIndicatorStyle({
         width: rect.width,
         height: rect.height,
@@ -321,24 +321,24 @@ export default function Home() {
         opacity: 1,
       });
     };
-    
+
     // Use requestAnimationFrame for smooth animation
     const animationFrame = requestAnimationFrame(updateIndicator);
     return () => cancelAnimationFrame(animationFrame);
   }, [activeTab]);
-  
+
   // Initialize the indicator position after component mounts
   useEffect(() => {
     // Set a small delay to ensure DOM is fully rendered
     const timer = setTimeout(() => {
       const tabElement = tabRefsMap.current[activeTab];
       if (!tabElement || !tabsContainerRef.current) return;
-      
+
       const rect = tabElement.getBoundingClientRect();
       const containerRect = tabsContainerRef.current.getBoundingClientRect();
-      
+
       const offsetLeft = rect.left - containerRect.left;
-      
+
       setIndicatorStyle({
         width: rect.width,
         height: rect.height,
@@ -347,49 +347,48 @@ export default function Home() {
         opacity: 1,
       });
     }, 50);
-    
+
     return () => clearTimeout(timer);
   }, []);
-  
+
   // TabButton component with ref handling
-  const TabButton = useCallback(({ 
-    id, 
-    isActive, 
-    onClick, 
-    children 
-  }: { 
+  const TabButton = useCallback(({
+    id,
+    isActive,
+    onClick,
+    children
+  }: {
     id: string;
     isActive: boolean;
     onClick: () => void;
     children: React.ReactNode;
   }) => {
     const buttonRef = useRef<HTMLButtonElement>(null);
-    
+
     useEffect(() => {
       if (buttonRef.current) {
         setTabRef(id, buttonRef.current);
       }
-      
+
       return () => {
         setTabRef(id, null);
       };
     }, [id]);
-    
+
     return (
       <button
         ref={buttonRef}
         onClick={onClick}
-        className={`tab-button relative z-5 cursor-pointer px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 outline-none focus:outline-none focus:ring-0 ${
-          isActive
+        className={`tab-button relative z-5 cursor-pointer px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 outline-none focus:outline-none focus:ring-0 ${isActive
             ? 'text-gray-800 border-none'
             : 'text-gray-500 border-none hover:text-gray-700 hover:bg-gray-50'
-        }`}
+          }`}
       >
         {children}
       </button>
     );
   }, [setTabRef]);
-  
+
   useEffect(() => {
     fetchServers();
   }, []);
@@ -403,7 +402,7 @@ export default function Home() {
       setFilteredServers(servers);
     }
   }, [currentProject, servers]);
-  
+
   // Check for any node connection issues
   useEffect(() => {
     if (filteredServers.length > 0) {
@@ -450,28 +449,28 @@ export default function Home() {
 
   const handleProjectSelect = async (projectId: string) => {
     if (!menuState.serverId) return;
-    
+
     try {
       setIsSubmitting(true);
       await moveServerToProject(menuState.serverId, projectId);
-      
+
       // Update the local server list
-      setServers(prevServers => 
-        prevServers.map(server => 
-          server.id === menuState.serverId 
-            ? { ...server, projectId } 
+      setServers(prevServers =>
+        prevServers.map(server =>
+          server.id === menuState.serverId
+            ? { ...server, projectId }
             : server
         )
       );
-      
+
       setMenuState({
         open: false,
         serverId: null,
         mode: 'main'
       });
-      
+
       setSuccessMessage(`Server moved to project successfully`);
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccessMessage(null);
@@ -480,7 +479,7 @@ export default function Home() {
       console.error("Failed to move server:", err);
       setSuccessMessage(null);
       setError(err instanceof Error ? err.message : 'Failed to move server');
-      
+
       // Clear error after 3 seconds
       setTimeout(() => {
         setError(null);
@@ -499,11 +498,11 @@ export default function Home() {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch servers');
       }
-      
+
       const data = await response.json();
       setServers(data);
       setError(null);
@@ -540,8 +539,8 @@ export default function Home() {
             <h1 className="text-2xl font-semibold text-gray-800">Servers</h1>
             {currentProject && (
               <p className="text-sm text-gray-500">
-                {currentProject.isDefault ? 
-                  `Showing all servers in the Default project` : 
+                {currentProject.isDefault ?
+                  `Showing all servers in the Default project` :
                   `Showing servers in ${currentProject.name} project`}
               </p>
             )}
@@ -557,13 +556,13 @@ export default function Home() {
 
         {/* Success Message */}
         {successMessage && (
-          <Alert 
+          <Alert
             type="success"
             message={successMessage}
             onDismiss={() => setSuccessMessage(null)}
           />
         )}
-        
+
         {/* Node Warnings Alert */}
         {nodeWarnings && (
           <Alert
@@ -572,10 +571,10 @@ export default function Home() {
             onDismiss={() => setNodeWarnings(false)}
           />
         )}
-        
+
         {/* Error Message */}
         {error && (
-          <Alert 
+          <Alert
             type="error"
             message={error}
             onDismiss={() => setError(null)}
@@ -584,12 +583,12 @@ export default function Home() {
 
         {/* Tabs with smooth animation */}
         <div className="mb-4">
-          <div 
-            ref={tabsContainerRef} 
+          <div
+            ref={tabsContainerRef}
             className="inline-flex p-1 space-x-1 bg-gray-100 rounded-lg relative"
           >
             {/* Animated indicator */}
-            <div 
+            <div
               className="absolute transform transition-all duration-200 ease-spring bg-white rounded-md shadow-xs border border-gray-200/50 z-0"
               style={{
                 width: `${indicatorStyle.width}px`,
@@ -600,7 +599,7 @@ export default function Home() {
                 transitionDelay: '30ms',
               }}
             />
-            
+
             {/* Tab buttons */}
             <TabButton
               id="servers"
@@ -609,7 +608,7 @@ export default function Home() {
             >
               All servers <span className='text-gray-500 ml-0.5'>{stats.total}</span>
             </TabButton>
-            
+
             <TabButton
               id="overview"
               isActive={activeTab === 'overview'}
@@ -638,11 +637,10 @@ export default function Home() {
                       >
                         <div className="flex items-center space-x-3">
                           <div className="flex-shrink-0">
-                            <div className={`h-1.5 w-1.5 rounded-full ${
-                              server.status?.status?.state === 'running' 
-                                ? 'bg-green-400' 
+                            <div className={`h-1.5 w-1.5 rounded-full ${server.status?.status?.state === 'running'
+                                ? 'bg-green-400'
                                 : 'bg-gray-300'
-                            }`}></div>
+                              }`}></div>
                           </div>
                           <div className="min-w-0 flex items-center">
                             <div className="text-xs font-medium text-gray-900 truncate">
@@ -650,7 +648,7 @@ export default function Home() {
                             </div>
                             {/* Warning icon for node connection issue */}
                             {!server.status?.id && (
-                              <Tooltip 
+                              <Tooltip
                                 content="Node connection issue. Server may be inaccessible."
                                 position="top"
                               >
@@ -675,7 +673,7 @@ export default function Home() {
                           <ChevronRightIcon className="h-3.5 w-3.5 text-gray-400" />
                         </div>
                       </Link>
-                      
+
                       {/* Three dots menu button */}
                       {(projects.length > 1) && (
                         <div className="relative h-full">
@@ -702,7 +700,7 @@ export default function Home() {
                 </div>
                 <h2 className="text-xl font-semibold text-gray-800 mb-2">
                   {currentProject?.isDefault
-                    ? "No servers found" 
+                    ? "No servers found"
                     : `No servers in ${currentProject?.name}`}
                 </h2>
                 <p className="text-gray-500 text-center max-w-md mb-6">
@@ -710,7 +708,7 @@ export default function Home() {
                     ? "You don't have any active servers yet. To create a new server, please contact your administrator."
                     : "There are no servers in this project yet. You can move servers here from other projects."}
                 </p>
-                <button 
+                <button
                   onClick={fetchServers}
                   className="flex items-center justify-center border border-gray-300/50 rounded-lg px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition duration-150"
                 >
@@ -725,7 +723,7 @@ export default function Home() {
         {/* Dropdown menu portal */}
         {menuState.open && menuState.serverId && (
           <div className="fixed inset-0 z-50 pointer-events-none">
-            <div 
+            <div
               className="absolute right-0 top-0 mt-1 pointer-events-auto"
               style={{
                 position: 'fixed',
@@ -748,8 +746,8 @@ export default function Home() {
                 })()
               }}
             >
-              <DropdownMenu 
-                isOpen={menuState.open} 
+              <DropdownMenu
+                isOpen={menuState.open}
                 onClose={handleCloseMenu}
               >
                 {menuState.mode === 'main' ? (
@@ -774,7 +772,7 @@ export default function Home() {
           </div>
         )}
 
-{activeTab === 'overview' && (
+        {activeTab === 'overview' && (
           <div className="">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="border border-gray-200 rounded-md p-4">
@@ -799,53 +797,6 @@ export default function Home() {
           </div>
         )}
       </div>
-      
-      {/* CSS for animations */}
-      <style>{`
-        /* Custom optimized spring easing function */
-        .ease-spring { 
-          transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1.2); 
-        }
-        
-        /* Remove white flash on active/focus for tab buttons */
-        .tab-button:focus-visible {
-          outline: none;
-          border-color: transparent;
-        }
-        
-        .tab-button {
-          -webkit-tap-highlight-color: transparent;
-        }
-        
-        /* Animation keyframes */
-        @keyframes scale-in {
-          0% { opacity: 0; transform: scale(0.95); }
-          100% { opacity: 1; transform: scale(1); }
-        }
-        
-        @keyframes fade-in {
-          0% { opacity: 0; }
-          100% { opacity: 1; }
-        }
-        
-        @keyframes slide-in {
-          0% { transform: translateX(20px); opacity: 0; }
-          100% { transform: translateX(0); opacity: 1; }
-        }
-        
-        /* Animation classes */
-        .animate-scale-in {
-          animation: scale-in 0.15s ease-out forwards;
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 0.1s ease-out forwards;
-        }
-        
-        .animate-slide-in {
-          animation: slide-in 0.2s ease-out forwards;
-        }
-      `}</style>
     </div>
   );
 }
