@@ -1,5 +1,11 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Eye, EyeOff, AlertTriangleIcon, CheckIcon, XIcon } from 'lucide-react';
+import {
+  EyeIcon,
+  EyeSlashIcon,
+  ExclamationTriangleIcon,
+  CheckIcon,
+  XMarkIcon
+} from '@heroicons/react/24/outline';
 import { useAuth } from './[auth]/Auth';
 
 // Alert component types
@@ -19,7 +25,7 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
     <div className={`${bgColor} border ${borderColor} rounded-md flex items-start justify-between mb-4`}>
       <div className="flex items-start p-3">
         {type === 'error' || type === 'warning' ? (
-          <AlertTriangleIcon className={`w-4 h-4 ${textColor} mr-2 mt-0.5`} />
+          <ExclamationTriangleIcon className={`w-4 h-4 ${textColor} mr-2 mt-0.5`} />
         ) : (
           <CheckIcon className={`w-4 h-4 ${textColor} mr-2 mt-0.5`} />
         )}
@@ -30,7 +36,7 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
           onClick={onDismiss}
           className={`p-2 ${textColor} hover:bg-opacity-10 cursor-pointer rounded-full`}
         >
-          <XIcon className="w-4 h-4" />
+          <XMarkIcon className="w-4 h-4" />
         </button>
       )}
     </div>
@@ -355,7 +361,6 @@ const ProfilePage: React.FC = () => {
             {activeTab === 'profile' && (
               <div>
                 <h2 className="text-lg font-medium text-gray-900 mb-1">Profile Information</h2>
-                <div className="text-gray-400 text-xs font-normal uppercase tracking-widest mb-4 mt-2">Current Username: {user?.username}</div>
                 <div className="mb-6">
                   <form onSubmit={handleSubmit}>
                     <div className="mb-4">
@@ -369,7 +374,7 @@ const ProfilePage: React.FC = () => {
                         value={formData.newUsername}
                         onChange={handleChange}
                         className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
-                        placeholder="Enter new username"
+                        placeholder={user?.username}
                       />
                       <p className="mt-1 text-xs text-gray-500">
                         Leave blank if you don't want to change your username
@@ -412,12 +417,12 @@ const ProfilePage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
                         >
                           {showCurrentPassword ? (
-                            <EyeOff className="w-4 h-4" />
+                            <EyeSlashIcon className="h-4 w-4 text-gray-400" />
                           ) : (
-                            <Eye className="w-4 h-4" />
+                            <EyeIcon className="h-4 w-4 text-gray-400" />
                           )}
                         </button>
                       </div>
@@ -440,12 +445,12 @@ const ProfilePage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
                         >
                           {showNewPassword ? (
-                            <EyeOff className="w-4 h-4" />
+                            <EyeSlashIcon className="h-4 w-4 text-gray-400" />
                           ) : (
-                            <Eye className="w-4 h-4" />
+                            <EyeIcon className="h-4 w-4 text-gray-400" />
                           )}
                         </button>
                       </div>
@@ -471,12 +476,12 @@ const ProfilePage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
                         >
                           {showConfirmPassword ? (
-                            <EyeOff className="w-4 h-4" />
+                            <EyeSlashIcon className="h-4 w-4 text-gray-400" />
                           ) : (
-                            <Eye className="w-4 h-4" />
+                            <EyeIcon className="h-4 w-4 text-gray-400" />
                           )}
                         </button>
                       </div>

@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronRightIcon, PlusIcon, ServerIcon, TrashIcon, PencilIcon, ArrowLeftIcon, CopyIcon, CheckIcon, ChevronLeftIcon, ChevronDownIcon, AlertTriangleIcon } from 'lucide-react';
+import {
+  ChevronRightIcon,
+  PlusIcon,
+  ServerIcon,
+  TrashIcon,
+  PencilIcon,
+  ArrowLeftIcon,
+  ClipboardDocumentIcon as CopyIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronDownIcon,
+  ExclamationTriangleIcon
+} from '@heroicons/react/24/outline';
 
 interface SystemState {
   version: string;
@@ -97,12 +109,12 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
   const bgColor = type === 'error' ? 'bg-red-50' : type === 'success' ? 'bg-green-50' : 'bg-yellow-50';
   const textColor = type === 'error' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-yellow-600';
   const borderColor = type === 'error' ? 'border-red-100' : type === 'success' ? 'border-green-100' : 'border-yellow-100';
-  
+
   return (
     <div className={`${bgColor} border ${borderColor} rounded-md flex items-start justify-between`}>
       <div className="flex items-start p-2">
         {type === 'error' || type === 'warning' ? (
-          <AlertTriangleIcon className={`w-3 h-3 ${textColor} mr-2 mt-0.5`} />
+          <ExclamationTriangleIcon className={`w-3 h-3 ${textColor} mr-2 mt-0.5`} />
         ) : null}
         <p className={`text-xs ${textColor}`}>{message}</p>
       </div>
@@ -158,7 +170,7 @@ const AdminNodesPage = () => {
       }));
     }
   }, [selectedNode, activeTab]);
-  
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -167,12 +179,12 @@ const AdminNodesPage = () => {
   const showAlert = useCallback((type: 'error' | 'success' | 'warning', message: string) => {
     const id = Date.now().toString();
     setAlerts(prev => [...prev, { id, type, message }]);
-    
+
     // Auto-dismiss after 5 seconds
     setTimeout(() => {
       setAlerts(prev => prev.filter(alert => alert.id !== id));
     }, 5000);
-    
+
     return id;
   }, []);
 
@@ -197,22 +209,22 @@ const AdminNodesPage = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       const headers = { 'Authorization': `Bearer ${token}` };
-      
+
       const [nodesRes, serversRes] = await Promise.all([
         fetch('/api/nodes', { headers }),
         fetch('/api/servers', { headers })
       ]);
-      
+
       if (!nodesRes.ok) {
         const errorData = await nodesRes.json();
         throw new Error(errorData.error || 'Failed to fetch nodes');
       }
-      
+
       if (!serversRes.ok) {
         const errorData = await serversRes.json();
         throw new Error(errorData.error || 'Failed to fetch servers');
       }
-      
+
       const [nodesData, serversData] = await Promise.all([
         nodesRes.json(),
         serversRes.json()
@@ -241,7 +253,7 @@ const AdminNodesPage = () => {
           return node;
         })
       );
-      
+
       setNodes(nodesWithState);
       setServers(serversData);
 
@@ -250,11 +262,11 @@ const AdminNodesPage = () => {
         const updatedNode = nodesWithState.find(n => n.id === selectedNode.id);
         if (updatedNode) {
           setSelectedNode(updatedNode);
-          
+
           // Update allocation pagination total if we're on the allocation tab
           if (activeTab === 'allocations' && updatedNode.allocations) {
             setAllocationPagination(prev => ({
-              ...prev, 
+              ...prev,
               total: updatedNode.allocations ? updatedNode.allocations.length : 0
             }));
           }
@@ -278,32 +290,32 @@ const AdminNodesPage = () => {
       const response = await fetch(`/api/nodes/${nodeId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to fetch node');
       }
-      
+
       const nodeData = await response.json();
-      
+
       // Update the node in the nodes list
-      setNodes(prevNodes => 
+      setNodes(prevNodes =>
         prevNodes.map(node => node.id === nodeId ? nodeData : node)
       );
-      
+
       // Update selected node if this is the one we're viewing
       if (selectedNode && selectedNode.id === nodeId) {
         setSelectedNode(nodeData);
-        
+
         // Update allocation pagination total if we're on the allocation tab
         if (activeTab === 'allocations' && nodeData.allocations) {
           setAllocationPagination(prev => ({
-            ...prev, 
+            ...prev,
             total: nodeData.allocations ? nodeData.allocations.length : 0
           }));
         }
       }
-      
+
       setError(null);
       return nodeData;
     } catch (err) {
@@ -318,7 +330,7 @@ const AdminNodesPage = () => {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    
+
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/nodes', {
@@ -331,12 +343,12 @@ const AdminNodesPage = () => {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
-        const errorMessage = Array.isArray(data.error) 
+        const errorMessage = Array.isArray(data.error)
           ? data.error.map((e: any) => e.message).join(', ')
           : data.error || 'Failed to create node';
-        
+
         throw new Error(errorMessage);
       }
 
@@ -370,22 +382,22 @@ const AdminNodesPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        const errorMessage = Array.isArray(data.error) 
+        const errorMessage = Array.isArray(data.error)
           ? data.error.map((e: any) => e.message).join(', ')
           : data.error || 'Failed to update node';
-        
+
         throw new Error(errorMessage);
       }
 
       await fetchData();
       showAlert('success', `Node "${formData.name}" updated successfully`);
-      
+
       // Fetch the updated node and update selected node
       const updatedNode = await fetchSingleNode(selectedNode.id);
       if (updatedNode) {
         setSelectedNode(updatedNode);
       }
-      
+
       setView('view');
       setFormData({ name: '', fqdn: '', port: 8080 });
     } catch (err) {
@@ -407,12 +419,12 @@ const AdminNodesPage = () => {
 
       if (!response.ok) {
         const data = await response.json();
-        
+
         if (data.count && data.count > 0) {
           showAlert('warning', `Cannot delete node with ${data.count} active servers`);
           return;
         }
-        
+
         throw new Error(data.error || 'Failed to delete node');
       }
 
@@ -421,7 +433,7 @@ const AdminNodesPage = () => {
         setView('list');
         setSelectedNode(null);
       }
-      
+
       showAlert('success', 'Node deleted successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete node';
@@ -460,7 +472,7 @@ const AdminNodesPage = () => {
   const getSortedNodes = () => {
     return [...nodes].sort((a, b) => {
       let comparison = 0;
-      
+
       switch (tableSortField) {
         case 'name':
           comparison = a.name.localeCompare(b.name);
@@ -482,7 +494,7 @@ const AdminNodesPage = () => {
         default:
           comparison = 0;
       }
-      
+
       return tableSortDirection === 'asc' ? comparison : -comparison;
     });
   };
@@ -496,7 +508,7 @@ const AdminNodesPage = () => {
           onDismiss={() => setFormError(null)}
         />
       )}
-      
+
       <div className="space-y-1">
         <label className="block text-xs font-medium text-gray-700">
           Name
@@ -594,7 +606,7 @@ const AdminNodesPage = () => {
       const updatedNode = await fetchSingleNode(selectedNode.id);
       if (updatedNode) {
         setSelectedNode(updatedNode);
-        
+
         // Update pagination if necessary
         if (updatedNode.allocations) {
           const totalPages = Math.ceil(updatedNode.allocations.length / allocationPagination.limit);
@@ -612,9 +624,9 @@ const AdminNodesPage = () => {
           }
         }
       }
-      
+
       showAlert('success', 'Allocation deleted successfully');
-      
+
       // Clear selected allocations
       setSelectedAllocations([]);
     } catch (err) {
@@ -626,7 +638,7 @@ const AdminNodesPage = () => {
   const renderPagination = (pagination: PaginationState, onPageChange: (page: number) => void) => {
     const totalPages = Math.max(1, Math.ceil(pagination.total / pagination.limit));
     const currentPage = pagination.page;
-    
+
     return (
       <div className="flex items-center justify-between mt-4 text-xs">
         <div className="text-gray-500">
@@ -640,7 +652,7 @@ const AdminNodesPage = () => {
           >
             <ChevronLeftIcon className="w-4 h-4" />
           </button>
-          
+
           {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
             // Calculate page numbers to show (current +/- 2)
             let pageNum;
@@ -653,22 +665,21 @@ const AdminNodesPage = () => {
             } else {
               pageNum = currentPage - 2 + i;
             }
-            
+
             return (
               <button
                 key={pageNum}
                 onClick={() => onPageChange(pageNum)}
-                className={`px-2 py-1 rounded ${
-                  currentPage === pageNum
+                className={`px-2 py-1 rounded ${currentPage === pageNum
                     ? 'bg-gray-900 text-white'
                     : 'border border-gray-200 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 {pageNum}
               </button>
             );
           })}
-          
+
           <button
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
@@ -683,38 +694,38 @@ const AdminNodesPage = () => {
 
   const renderAllocationTab = () => {
     if (!selectedNode) return null;
-  
+
     const allocations = selectedNode.allocations || [];
     const assignedAllocations = allocations.filter(a => a.assigned);
     const unassignedAllocations = allocations.filter(a => !a.assigned);
-    
+
     // Calculate paginated allocations
     const paginatedAssigned = assignedAllocations.slice(
       (allocationPagination.page - 1) * allocationPagination.limit,
       allocationPagination.page * allocationPagination.limit
     );
-    
+
     const paginatedUnassigned = unassignedAllocations.slice(
       Math.max(0, (allocationPagination.page - 1) * allocationPagination.limit - assignedAllocations.length),
       Math.max(0, allocationPagination.page * allocationPagination.limit - assignedAllocations.length)
     );
-    
+
     // Determine if we show assigned, unassigned, or both in the current page
     const startIdx = (allocationPagination.page - 1) * allocationPagination.limit;
     const endIdx = allocationPagination.page * allocationPagination.limit;
-    
+
     const showAssigned = startIdx < assignedAllocations.length;
     const showUnassigned = endIdx > assignedAllocations.length;
-    
+
     const handlePageChange = (page: number) => {
       setAllocationPagination(prev => ({ ...prev, page }));
     };
-  
+
     const handleCreateAllocation = async (e: React.FormEvent) => {
       e.preventDefault();
       setIsCreatingAllocation(true);
       setAllocationFormError(null);
-  
+
       try {
         const token = localStorage.getItem('token');
         const response = await fetch(`/api/nodes/${selectedNode.id}/allocations`, {
@@ -725,17 +736,17 @@ const AdminNodesPage = () => {
           },
           body: JSON.stringify(allocationFormData)
         });
-  
+
         if (!response.ok) {
           const data = await response.json();
           throw new Error(data.error || 'Failed to create allocation');
         }
-        
+
         // Fetch the updated node data directly
         const updatedNode = await fetchSingleNode(selectedNode.id);
         if (updatedNode) {
           setSelectedNode(updatedNode);
-          
+
           // Update pagination if necessary
           if (updatedNode.allocations) {
             setAllocationPagination(prev => ({
@@ -744,7 +755,7 @@ const AdminNodesPage = () => {
             }));
           }
         }
-  
+
         setAllocationFormData({ bindAddress: '0.0.0.0' });
         setAllocationFormMode('single');
         showAlert('success', 'Allocation created successfully');
@@ -756,7 +767,7 @@ const AdminNodesPage = () => {
         setIsCreatingAllocation(false);
       }
     };
-  
+
     const handleDeleteSelected = async () => {
       for (const id of selectedAllocations) {
         try {
@@ -767,15 +778,15 @@ const AdminNodesPage = () => {
       }
       setSelectedAllocations([]);
     };
-  
+
     const toggleAllocation = (id: string) => {
-      setSelectedAllocations(prev => 
-        prev.includes(id) 
+      setSelectedAllocations(prev =>
+        prev.includes(id)
           ? prev.filter(allocId => allocId !== id)
           : [...prev, id]
       );
     };
-  
+
     return (
       <div className="grid grid-cols-3 gap-6">
         {/* Allocations List - Left Side */}
@@ -799,7 +810,7 @@ const AdminNodesPage = () => {
                   </button>
                 )}
               </div>
-  
+
               <div className="space-y-4">
                 {showAssigned && assignedAllocations.length > 0 && (
                   <div>
@@ -831,7 +842,7 @@ const AdminNodesPage = () => {
                     </div>
                   </div>
                 )}
-  
+
                 {showUnassigned && unassignedAllocations.length > 0 && (
                   <div>
                     <h4 className="text-xs font-medium text-gray-500 mb-2">Available</h4>
@@ -872,19 +883,19 @@ const AdminNodesPage = () => {
                     </div>
                   </div>
                 )}
-  
+
                 {allocations.length === 0 && (
                   <div className="py-6 text-center">
                     <p className="text-sm text-gray-500">No allocations found</p>
                   </div>
                 )}
               </div>
-              
+
               {allocations.length > 0 && renderPagination(allocationPagination, handlePageChange)}
             </div>
           </div>
         </div>
-  
+
         {/* Create Allocation Form - Right Side */}
         <div>
           <div className="bg-white border border-gray-200 rounded-md shadow-xs">
@@ -896,41 +907,39 @@ const AdminNodesPage = () => {
                     Allocate ports for your servers to use on this node.
                   </p>
                 </div>
-  
+
                 {allocationFormError && (
-                  <Alert 
+                  <Alert
                     type="error"
                     message={allocationFormError}
                     onDismiss={() => setAllocationFormError(null)}
                   />
                 )}
-  
+
                 <form onSubmit={handleCreateAllocation} className="space-y-4">
                   <div className="flex space-x-4">
                     <button
                       type="button"
                       onClick={() => setAllocationFormMode('single')}
-                      className={`px-3 py-2 text-xs font-medium rounded-md ${
-                        allocationFormMode === 'single'
+                      className={`px-3 py-2 text-xs font-medium rounded-md ${allocationFormMode === 'single'
                           ? 'bg-gray-900 text-white'
                           : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       Single Port
                     </button>
                     <button
                       type="button"
                       onClick={() => setAllocationFormMode('range')}
-                      className={`px-3 py-2 text-xs font-medium rounded-md ${
-                        allocationFormMode === 'range'
+                      className={`px-3 py-2 text-xs font-medium rounded-md ${allocationFormMode === 'range'
                           ? 'bg-gray-900 text-white'
                           : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       Port Range
                     </button>
                   </div>
-  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-700">
@@ -945,7 +954,7 @@ const AdminNodesPage = () => {
                         required
                       />
                     </div>
-  
+
                     {allocationFormMode === 'single' ? (
                       <div>
                         <label className="block text-xs font-medium text-gray-700">
@@ -954,8 +963,8 @@ const AdminNodesPage = () => {
                         <input
                           type="number"
                           value={allocationFormData.port || ''}
-                          onChange={(e) => setAllocationFormData({ 
-                            ...allocationFormData, 
+                          onChange={(e) => setAllocationFormData({
+                            ...allocationFormData,
                             port: parseInt(e.target.value),
                             portRange: undefined
                           })}
@@ -1011,7 +1020,7 @@ const AdminNodesPage = () => {
                         </div>
                       </div>
                     )}
-  
+
                     <div>
                       <label className="block text-xs font-medium text-gray-700">
                         Alias (Optional)
@@ -1024,7 +1033,7 @@ const AdminNodesPage = () => {
                         placeholder="node.example.com"
                       />
                     </div>
-  
+
                     <div>
                       <label className="block text-xs font-medium text-gray-700">
                         Notes (Optional)
@@ -1038,7 +1047,7 @@ const AdminNodesPage = () => {
                       />
                     </div>
                   </div>
-  
+
                   <button
                     type="submit"
                     disabled={isCreatingAllocation}
@@ -1109,41 +1118,37 @@ const AdminNodesPage = () => {
         <div className="flex space-x-4 border-b border-gray-200">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`py-2 px-1 text-xs font-medium border-b-2 ${
-              activeTab === 'overview'
+            className={`py-2 px-1 text-xs font-medium border-b-2 ${activeTab === 'overview'
                 ? 'border-gray-900 text-gray-900'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             Overview
           </button>
           <button
             onClick={() => setActiveTab('servers')}
-            className={`py-2 px-1 text-xs font-medium border-b-2 ${
-              activeTab === 'servers'
+            className={`py-2 px-1 text-xs font-medium border-b-2 ${activeTab === 'servers'
                 ? 'border-gray-900 text-gray-900'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             Servers ({nodeServers.length})
           </button>
           <button
-            onClick={() => setActiveTab('allocations')} 
-            className={`py-2 px-1 text-xs font-medium border-b-2 ${
-              activeTab === 'allocations'
+            onClick={() => setActiveTab('allocations')}
+            className={`py-2 px-1 text-xs font-medium border-b-2 ${activeTab === 'allocations'
                 ? 'border-gray-900 text-gray-900'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             Allocations
           </button>
           <button
             onClick={() => setActiveTab('configure')}
-            className={`py-2 px-1 text-xs font-medium border-b-2 ${
-              activeTab === 'configure'
+            className={`py-2 px-1 text-xs font-medium border-b-2 ${activeTab === 'configure'
                 ? 'border-gray-900 text-gray-900'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             Configure
           </button>
@@ -1172,10 +1177,9 @@ const AdminNodesPage = () => {
                 <div>
                   <div className="text-xs text-gray-500">Status</div>
                   <div className="flex items-center space-x-2 mt-1">
-                    <div 
-                      className={`h-2 w-2 rounded-full ${
-                        selectedNode.isOnline ? 'bg-green-400' : 'bg-gray-300'
-                      }`}
+                    <div
+                      className={`h-2 w-2 rounded-full ${selectedNode.isOnline ? 'bg-green-400' : 'bg-gray-300'
+                        }`}
                     />
                     <span className="text-sm">
                       {selectedNode.isOnline ? 'Online' : 'Offline'}
@@ -1268,10 +1272,9 @@ const AdminNodesPage = () => {
                 <div className="px-6 h-16 flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <div className="flex-shrink-0">
-                      <div 
-                        className={`h-2 w-2 rounded-full ${
-                          server.status.state === 'running' ? 'bg-green-400' : 'bg-gray-300'
-                        }`}
+                      <div
+                        className={`h-2 w-2 rounded-full ${server.status.state === 'running' ? 'bg-green-400' : 'bg-gray-300'
+                          }`}
                       />
                     </div>
                     <div>
@@ -1393,7 +1396,7 @@ const AdminNodesPage = () => {
 
   const renderNodeTable = () => {
     const sortedNodes = getSortedNodes();
-    
+
     return (
       <div className="overflow-x-auto rounded-lg">
         <table className="min-w-full border-collapse">
@@ -1448,8 +1451,8 @@ const AdminNodesPage = () => {
             {sortedNodes.map((node) => {
               const nodeServers = servers.filter(server => server.node.id === node.id);
               return (
-                <tr 
-                  key={node.id} 
+                <tr
+                  key={node.id}
                   className="hover:bg-gray-50 cursor-pointer"
                   onClick={() => {
                     setSelectedNode(node);
@@ -1465,11 +1468,10 @@ const AdminNodesPage = () => {
                   <td className="p-3 text-xs text-gray-500">{node.fqdn}</td>
                   <td className="p-3 text-xs text-gray-500">{node.port}</td>
                   <td className="p-3 text-xs">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      node.isOnline 
-                        ? 'bg-green-100 text-green-800' 
+                    <span className={`px-2 py-1 rounded-full text-xs ${node.isOnline
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-800'
-                    }`}>
+                      }`}>
                       {node.isOnline ? 'Online' : 'Offline'}
                     </span>
                   </td>
@@ -1531,8 +1533,8 @@ const AdminNodesPage = () => {
       <div className="min-h-screen">
         <div className="p-6 flex items-center justify-center h-64">
           <div className="relative">
-          <h2 className="text-gray-800 font-medium text-lg mb-1">Fetching Docker information for one or more nodes...</h2>
-          <p className="text-gray-500 text-xs">Unfortunately, this is quite a slow process. Give us a moment.</p>
+            <h2 className="text-gray-800 font-medium text-lg mb-1">Fetching Docker information for one or more nodes...</h2>
+            <p className="text-gray-500 text-xs">Unfortunately, this is quite a slow process. Give us a moment.</p>
           </div>
         </div>
       </div>

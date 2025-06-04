@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronRightIcon, TrashIcon, PencilIcon, ArrowLeftIcon, PlusIcon, FolderIcon, FileIcon, LinkIcon } from 'lucide-react';
+import {
+  ChevronRightIcon,
+  TrashIcon,
+  PencilIcon,
+  ArrowLeftIcon,
+  PlusIcon,
+  FolderIcon,
+  DocumentIcon as FileIcon,
+  LinkIcon
+} from '@heroicons/react/24/outline';
 import { z } from 'zod';
 import AdminBar from '../../components/AdminBar';
 import LoadingSpinner from '../../components/LoadingSpinner';

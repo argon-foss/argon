@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {  
-  PlusIcon, 
-  TrashIcon, 
-  PencilIcon, 
-  ArrowLeftIcon, 
-  CopyIcon, 
-  CheckIcon, 
-  ChevronDownIcon, 
-  RefreshCwIcon, 
+import {
+  PlusIcon,
+  TrashIcon,
+  PencilIcon,
+  ArrowLeftIcon,
+  ClipboardDocumentIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  ArrowPathIcon,
   KeyIcon,
-  AlertTriangleIcon,
+  ExclamationTriangleIcon,
   ClockIcon
-} from 'lucide-react';
+} from '@heroicons/react/24/outline';
 import AdminBar from '../../components/AdminBar';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
@@ -72,12 +72,12 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
   const bgColor = type === 'error' ? 'bg-red-50' : type === 'success' ? 'bg-green-50' : 'bg-yellow-50';
   const textColor = type === 'error' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-yellow-600';
   const borderColor = type === 'error' ? 'border-red-100' : type === 'success' ? 'border-green-100' : 'border-yellow-100';
-  
+
   return (
     <div className={`${bgColor} border ${borderColor} rounded-md flex items-start justify-between`}>
       <div className="flex items-start p-2">
         {type === 'error' || type === 'warning' ? (
-          <AlertTriangleIcon className={`w-3 h-3 ${textColor} mr-2 mt-0.5`} />
+          <ExclamationTriangleIcon className={`w-3 h-3 ${textColor} mr-2 mt-0.5`} />
         ) : null}
         <p className={`text-xs ${textColor}`}>{message}</p>
       </div>
@@ -120,7 +120,7 @@ const AdminAPIKeysPage = () => {
   }, []);
 
   useEffect(() => {
-    const filtered = users.filter(user => 
+    const filtered = users.filter(user =>
       user.username.toLowerCase().includes(userSearch.toLowerCase())
     );
     setFilteredUsers(filtered);
@@ -130,12 +130,12 @@ const AdminAPIKeysPage = () => {
   const showAlert = useCallback((type: 'error' | 'success' | 'warning', message: string) => {
     const id = Date.now().toString();
     setAlerts(prev => [...prev, { id, type, message }]);
-    
+
     // Auto-dismiss after 5 seconds
     setTimeout(() => {
       setAlerts(prev => prev.filter(alert => alert.id !== id));
     }, 5000);
-    
+
     return id;
   }, []);
 
@@ -149,22 +149,22 @@ const AdminAPIKeysPage = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       const headers = { 'Authorization': `Bearer ${token}` };
-      
+
       const [apiKeysRes, usersRes] = await Promise.all([
         fetch('/api/api-keys', { headers }),
         fetch('/api/users', { headers })
       ]);
-      
+
       if (!apiKeysRes.ok) {
         const errorData = await apiKeysRes.json();
         throw new Error(errorData.error || 'Failed to fetch API keys');
       }
-      
+
       if (!usersRes.ok) {
         const errorData = await usersRes.json();
         throw new Error(errorData.error || 'Failed to fetch users');
       }
-      
+
       const [apiKeysData, usersData] = await Promise.all([
         apiKeysRes.json(),
         usersRes.json()
@@ -172,7 +172,7 @@ const AdminAPIKeysPage = () => {
 
       setApiKeys(apiKeysData);
       setUsers(usersData);
-      
+
       // Update filtered users
       setFilteredUsers(usersData);
 
@@ -189,11 +189,11 @@ const AdminAPIKeysPage = () => {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    
+
     try {
       // Calculate expiration date if set
       let expiresAt = undefined;
-      
+
       if (expirationOption) {
         if (expirationOption === 'custom' && formData.expiresAt) {
           expiresAt = formData.expiresAt;
@@ -204,7 +204,7 @@ const AdminAPIKeysPage = () => {
           expiresAt = date.toISOString();
         }
       }
-      
+
       const token = localStorage.getItem('token');
       const response = await fetch('/api/api-keys', {
         method: 'POST',
@@ -219,12 +219,12 @@ const AdminAPIKeysPage = () => {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
-        const errorMessage = Array.isArray(data.error) 
+        const errorMessage = Array.isArray(data.error)
           ? data.error.map((e: any) => e.message).join(', ')
           : data.error || 'Failed to create API key';
-        
+
         throw new Error(errorMessage);
       }
 
@@ -232,11 +232,11 @@ const AdminAPIKeysPage = () => {
       setApiKeys(prev => [...prev, data]);
       setSelectedApiKey(data);
       setView('view');
-      
+
       // Reset form
       setFormData({ name: '', permissions: ['user'] });
       setExpirationOption('');
-      
+
       showAlert('success', `API key "${data.name}" created successfully`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create API key';
@@ -253,7 +253,7 @@ const AdminAPIKeysPage = () => {
     try {
       // Calculate expiration date if set
       let expiresAt = undefined;
-      
+
       if (expirationOption === '') {
         expiresAt = null; // Explicitly set to null to remove expiration
       } else if (expirationOption === 'custom' && formData.expiresAt) {
@@ -281,10 +281,10 @@ const AdminAPIKeysPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        const errorMessage = Array.isArray(data.error) 
+        const errorMessage = Array.isArray(data.error)
           ? data.error.map((e: any) => e.message).join(', ')
           : data.error || 'Failed to update API key';
-        
+
         throw new Error(errorMessage);
       }
 
@@ -292,11 +292,11 @@ const AdminAPIKeysPage = () => {
       setApiKeys(prev => prev.map(key => key.id === data.id ? data : key));
       setSelectedApiKey(data);
       setView('view');
-      
+
       // Reset form
       setFormData({ name: '', permissions: ['user'] });
       setExpirationOption('');
-      
+
       showAlert('success', `API key "${data.name}" updated successfully`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update API key';
@@ -322,12 +322,12 @@ const AdminAPIKeysPage = () => {
 
       // Remove the key from the list
       setApiKeys(prev => prev.filter(key => key.id !== apiKeyId));
-      
+
       if (selectedApiKey?.id === apiKeyId) {
         setView('list');
         setSelectedApiKey(null);
       }
-      
+
       showAlert('success', 'API key deleted successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete API key';
@@ -351,11 +351,11 @@ const AdminAPIKeysPage = () => {
       }
 
       const data = await response.json();
-      
+
       // Update the key in the list
       setApiKeys(prev => prev.map(key => key.id === data.id ? data : key));
       setSelectedApiKey(data);
-      
+
       showAlert('success', 'API key regenerated successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to regenerate API key';
@@ -389,11 +389,11 @@ const AdminAPIKeysPage = () => {
     if (userFilter) {
       filtered = filtered.filter(key => key.userId === userFilter);
     }
-    
+
     // Then sort
     return filtered.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (tableSortField) {
         case 'name':
           comparison = a.name.localeCompare(b.name);
@@ -423,7 +423,7 @@ const AdminAPIKeysPage = () => {
         default:
           comparison = 0;
       }
-      
+
       return tableSortDirection === 'asc' ? comparison : -comparison;
     });
   };
@@ -437,7 +437,7 @@ const AdminAPIKeysPage = () => {
           onDismiss={() => setFormError(null)}
         />
       )}
-      
+
       <div className="space-y-1">
         <label className="block text-xs font-medium text-gray-700">
           Name
@@ -535,7 +535,7 @@ const AdminAPIKeysPage = () => {
           value={expirationOption}
           onChange={(e) => {
             setExpirationOption(e.target.value);
-            
+
             // Clear custom date when not using custom
             if (e.target.value !== 'custom') {
               setFormData({ ...formData, expiresAt: undefined });
@@ -547,7 +547,7 @@ const AdminAPIKeysPage = () => {
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </select>
-        
+
         {expirationOption === 'custom' && (
           <div className="mt-2">
             <input
@@ -559,7 +559,7 @@ const AdminAPIKeysPage = () => {
             />
           </div>
         )}
-        
+
         <p className="text-xs text-gray-500 mt-1">
           After this time, the API key will no longer be valid
         </p>
@@ -610,7 +610,7 @@ const AdminAPIKeysPage = () => {
               <h2 className="text-lg font-semibold text-gray-900">{selectedApiKey.name}</h2>
               {isExpired && (
                 <div className="text-xs text-red-600 mt-1 flex items-center">
-                  <AlertTriangleIcon className="w-3 h-3 mr-1" />
+                  <ExclamationTriangleIcon className="w-3 h-3 mr-1" />
                   This API key has expired
                 </div>
               )}
@@ -625,14 +625,14 @@ const AdminAPIKeysPage = () => {
                   permissions: selectedApiKey.permissions,
                   expiresAt: selectedApiKey.expiresAt ? new Date(selectedApiKey.expiresAt).toISOString().substring(0, 16) : undefined
                 });
-                
+
                 // Set expiration option
                 if (!selectedApiKey.expiresAt) {
                   setExpirationOption('');
                 } else {
                   setExpirationOption('custom');
                 }
-                
+
                 setView('edit');
               }}
               className="flex items-center px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
@@ -644,7 +644,7 @@ const AdminAPIKeysPage = () => {
               onClick={() => handleRegenerateKey(selectedApiKey.id)}
               className="flex items-center px-3 py-2 text-xs font-medium text-orange-600 bg-white border border-gray-200 rounded-md hover:bg-orange-50"
             >
-              <RefreshCwIcon className="w-3.5 h-3.5 mr-1.5" />
+              <ArrowPathIcon className="w-3.5 h-3.5 mr-1.5" />
               Regenerate
             </button>
             <button
@@ -675,7 +675,7 @@ const AdminAPIKeysPage = () => {
                   </>
                 ) : (
                   <>
-                    <CopyIcon className="w-3.5 h-3.5 mr-1" />
+                    <ClipboardDocumentIcon className="w-3.5 h-3.5 mr-1" />
                     Copy
                   </>
                 )}
@@ -705,14 +705,14 @@ const AdminAPIKeysPage = () => {
                 <div className="text-xs text-gray-500">Owner</div>
                 <div className="text-sm mt-1">{owner?.username || 'Unknown user'}</div>
               </div>
-              
+
               <div>
                 <div className="text-xs text-gray-500">Permissions</div>
                 <div className="text-sm mt-1">
                   {selectedApiKey.permissions.map(permission => {
                     const permInfo = permissionOptions.find(p => p.value === permission);
                     return (
-                      <span 
+                      <span
                         key={permission}
                         className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 mr-2 mb-1"
                       >
@@ -722,14 +722,14 @@ const AdminAPIKeysPage = () => {
                   })}
                 </div>
               </div>
-              
+
               <div className="pt-4 border-t border-gray-100">
                 <div className="text-xs text-gray-500">Created At</div>
                 <div className="text-sm mt-1">
                   {new Date(selectedApiKey.createdAt).toLocaleString()}
                 </div>
               </div>
-              
+
               {selectedApiKey.lastUsed && (
                 <div>
                   <div className="text-xs text-gray-500">Last Used</div>
@@ -738,16 +738,16 @@ const AdminAPIKeysPage = () => {
                   </div>
                 </div>
               )}
-              
+
               <div>
                 <div className="text-xs text-gray-500">Expires</div>
                 <div className="text-sm mt-1">
-                  {selectedApiKey.expiresAt 
-                    ? new Date(selectedApiKey.expiresAt).toLocaleString() 
+                  {selectedApiKey.expiresAt
+                    ? new Date(selectedApiKey.expiresAt).toLocaleString()
                     : 'Never'}
                 </div>
               </div>
-            <div>
+              <div>
                 <div className="text-xs text-gray-500">Updated At</div>
                 <div className="text-sm mt-1">
                   {new Date(selectedApiKey.updatedAt).toLocaleString()}
@@ -762,7 +762,7 @@ const AdminAPIKeysPage = () => {
 
   const renderAPIKeyTable = () => {
     const sortedAPIKeys = getSortedAPIKeys();
-    
+
     return (
       <div className="overflow-x-auto rounded-lg">
         <table className="min-w-full border-collapse">
@@ -820,10 +820,10 @@ const AdminAPIKeysPage = () => {
             {sortedAPIKeys.map((apiKey) => {
               const owner = users.find(user => user.id === apiKey.userId);
               const isExpired = apiKey.expiresAt && new Date(apiKey.expiresAt) < new Date();
-              
+
               return (
-                <tr 
-                  key={apiKey.id} 
+                <tr
+                  key={apiKey.id}
                   className="hover:bg-gray-50 cursor-pointer"
                   onClick={() => {
                     setSelectedApiKey(apiKey);
@@ -841,7 +841,7 @@ const AdminAPIKeysPage = () => {
                     {apiKey.permissions.map(permission => {
                       const permInfo = permissionOptions.find(p => p.value === permission);
                       return (
-                        <span 
+                        <span
                           key={permission}
                           className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 mr-1"
                         >
@@ -857,7 +857,7 @@ const AdminAPIKeysPage = () => {
                     {apiKey.expiresAt ? (
                       <span className={`flex items-center ${isExpired ? 'text-red-600' : 'text-gray-500'}`}>
                         {isExpired ? (
-                          <AlertTriangleIcon className="w-3 h-3 mr-1" />
+                          <ExclamationTriangleIcon className="w-3 h-3 mr-1" />
                         ) : (
                           <ClockIcon className="w-3 h-3 mr-1" />
                         )}
@@ -880,7 +880,7 @@ const AdminAPIKeysPage = () => {
                         className="p-1 text-gray-400 hover:text-orange-600"
                         title="Regenerate Key"
                       >
-                        <RefreshCwIcon className="w-4 h-4" />
+                        <ArrowPathIcon className="w-4 h-4" />
                       </button>
                       <button
                         onClick={(e) => {
@@ -891,14 +891,14 @@ const AdminAPIKeysPage = () => {
                             permissions: apiKey.permissions,
                             expiresAt: apiKey.expiresAt ? new Date(apiKey.expiresAt).toISOString().substring(0, 16) : undefined
                           });
-                          
+
                           // Set expiration option
                           if (!apiKey.expiresAt) {
                             setExpirationOption('');
                           } else {
                             setExpirationOption('custom');
                           }
-                          
+
                           setSelectedApiKey(apiKey);
                           setView('edit');
                         }}

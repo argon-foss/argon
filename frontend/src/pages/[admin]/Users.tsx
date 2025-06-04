@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { PlusIcon, UserIcon, TrashIcon, PencilIcon, ArrowLeftIcon, ChevronDownIcon, AlertTriangleIcon, ShieldIcon } from 'lucide-react';
+import {
+  PlusIcon,
+  UserIcon,
+  TrashIcon,
+  PencilSquareIcon,
+  ArrowLeftIcon,
+  ChevronDownIcon,
+  ExclamationTriangleIcon,
+  CheckIcon,
+  XMarkIcon
+} from '@heroicons/react/24/outline';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 interface User {
@@ -29,13 +39,15 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
   const bgColor = type === 'error' ? 'bg-red-50' : type === 'success' ? 'bg-green-50' : 'bg-yellow-50';
   const textColor = type === 'error' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-yellow-600';
   const borderColor = type === 'error' ? 'border-red-100' : type === 'success' ? 'border-green-100' : 'border-yellow-100';
-  
+
   return (
     <div className={`${bgColor} border ${borderColor} rounded-md flex items-start justify-between`}>
       <div className="flex items-start p-2">
         {type === 'error' || type === 'warning' ? (
-          <AlertTriangleIcon className={`w-3 h-3 ${textColor} mr-2 mt-0.5`} />
-        ) : null}
+          <ExclamationTriangleIcon className={`w-4 h-4 ${textColor} mr-2 mt-0.5`} />
+        ) : (
+          <CheckIcon className={`w-4 h-4 ${textColor} mr-2 mt-0.5`} />
+        )}
         <p className={`text-xs ${textColor}`}>{message}</p>
       </div>
       {onDismiss && (
@@ -43,7 +55,7 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
           onClick={onDismiss}
           className={`ml-2 mr-2 p-1 ${textColor} hover:bg-opacity-10 cursor-pointer rounded-full`}
         >
-          ×
+          <XMarkIcon className="w-4 h-4" />
         </button>
       )}
     </div>
@@ -83,12 +95,12 @@ const AdminUsersPage = () => {
   const showAlert = useCallback((type: 'error' | 'success' | 'warning', message: string) => {
     const id = Date.now().toString();
     setAlerts(prev => [...prev, { id, type, message }]);
-    
+
     // Auto-dismiss after 5 seconds
     setTimeout(() => {
       setAlerts(prev => prev.filter(alert => alert.id !== id));
     }, 5000);
-    
+
     return id;
   }, []);
 
@@ -102,23 +114,23 @@ const AdminUsersPage = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       const headers = { 'Authorization': `Bearer ${token}` };
-      
+
       const response = await fetch('/api/users', { headers });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to fetch users');
       }
-      
+
       const usersData = await response.json();
-      
+
       // Convert string dates to Date objects
       const formattedUsers = usersData.map((user: any) => ({
         ...user,
         createdAt: new Date(user.createdAt),
         updatedAt: new Date(user.updatedAt)
       }));
-      
+
       setUsers(formattedUsers);
       setError(null);
     } catch (err) {
@@ -137,31 +149,31 @@ const AdminUsersPage = () => {
       const response = await fetch(`/api/users/${userId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to fetch user');
       }
-      
+
       const userData = await response.json();
-      
+
       // Convert string dates to Date objects
       const formattedUser = {
         ...userData,
         createdAt: new Date(userData.createdAt),
         updatedAt: new Date(userData.updatedAt)
       };
-      
+
       // Update the user in the users list
-      setUsers(prevUsers => 
+      setUsers(prevUsers =>
         prevUsers.map(user => user.id === userId ? formattedUser : user)
       );
-      
+
       // Update selected user if this is the one we're viewing
       if (selectedUser && selectedUser.id === userId) {
         setSelectedUser(formattedUser);
       }
-      
+
       setError(null);
       return formattedUser;
     } catch (err) {
@@ -176,7 +188,7 @@ const AdminUsersPage = () => {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    
+
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/users', {
@@ -189,12 +201,12 @@ const AdminUsersPage = () => {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
-        const errorMessage = Array.isArray(data.error) 
+        const errorMessage = Array.isArray(data.error)
           ? data.error.map((e: any) => e.message).join(', ')
           : data.error || 'Failed to create user';
-        
+
         throw new Error(errorMessage);
       }
 
@@ -217,12 +229,12 @@ const AdminUsersPage = () => {
     try {
       const token = localStorage.getItem('token');
       const payload = { ...formData };
-      
+
       // If password is empty, remove it from the payload
       if (!payload.password) {
         delete (payload as any).password;
       }
-      
+
       const response = await fetch(`/api/users/${selectedUser.id}`, {
         method: 'PATCH',
         headers: {
@@ -235,22 +247,22 @@ const AdminUsersPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        const errorMessage = Array.isArray(data.error) 
+        const errorMessage = Array.isArray(data.error)
           ? data.error.map((e: any) => e.message).join(', ')
           : data.error || 'Failed to update user';
-        
+
         throw new Error(errorMessage);
       }
 
       await fetchData();
       showAlert('success', `User "${formData.username}" updated successfully`);
-      
+
       // Fetch the updated user and update selected user
       const updatedUser = await fetchSingleUser(selectedUser.id);
       if (updatedUser) {
         setSelectedUser(updatedUser);
       }
-      
+
       setView('view');
       setFormData({ username: '', password: '', permissions: ['SERVERS_VIEW', 'SERVERS_MANAGE'] });
     } catch (err) {
@@ -280,7 +292,7 @@ const AdminUsersPage = () => {
         setView('list');
         setSelectedUser(null);
       }
-      
+
       showAlert('success', 'User deleted successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete user';
@@ -300,7 +312,7 @@ const AdminUsersPage = () => {
   const getSortedUsers = () => {
     return [...users].sort((a, b) => {
       let comparison = 0;
-      
+
       switch (tableSortField) {
         case 'username':
           comparison = a.username.localeCompare(b.username);
@@ -314,7 +326,7 @@ const AdminUsersPage = () => {
         default:
           comparison = 0;
       }
-      
+
       return tableSortDirection === 'asc' ? comparison : -comparison;
     });
   };
@@ -344,7 +356,7 @@ const AdminUsersPage = () => {
           onDismiss={() => setFormError(null)}
         />
       )}
-      
+
       <div className="space-y-1">
         <label className="block text-xs font-medium text-gray-700">
           Username
@@ -376,7 +388,7 @@ const AdminUsersPage = () => {
           required={type === 'create'}
         />
         <p className="text-xs text-gray-500 mt-1">
-          {type === 'create' 
+          {type === 'create'
             ? 'Must be at least 8 characters long'
             : 'Enter a new password or leave blank to keep the current one'}
         </p>
@@ -435,8 +447,8 @@ const AdminUsersPage = () => {
         {permissions.map(permission => {
           const permInfo = availablePermissions.find(p => p.id === permission);
           return (
-            <span 
-              key={permission} 
+            <span
+              key={permission}
               className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700"
               title={permInfo?.description}
             >
@@ -480,14 +492,14 @@ const AdminUsersPage = () => {
               }}
               className="flex items-center px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
             >
-              <PencilIcon className="w-3.5 h-3.5 mr-1.5" />
+              <PencilSquareIcon className="w-4 h-4" />
               Edit
             </button>
             <button
               onClick={() => handleDelete(selectedUser.id)}
               className="flex items-center px-3 py-2 text-xs font-medium text-red-600 bg-white border border-gray-200 rounded-md hover:bg-red-50"
             >
-              <TrashIcon className="w-3.5 h-3.5 mr-1.5" />
+              <TrashIcon className="w-4 h-4" />
               Delete
             </button>
           </div>
@@ -496,21 +508,19 @@ const AdminUsersPage = () => {
         <div className="flex space-x-4 border-b border-gray-200">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`py-2 px-1 text-xs font-medium border-b-2 ${
-              activeTab === 'overview'
-                ? 'border-gray-900 text-gray-900'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+            className={`py-2 px-1 text-xs font-medium border-b-2 ${activeTab === 'overview'
+              ? 'border-gray-900 text-gray-900'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
           >
             Overview
           </button>
           <button
-            onClick={() => setActiveTab('permissions')} 
-            className={`py-2 px-1 text-xs font-medium border-b-2 ${
-              activeTab === 'permissions'
-                ? 'border-gray-900 text-gray-900'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+            onClick={() => setActiveTab('permissions')}
+            className={`py-2 px-1 text-xs font-medium border-b-2 ${activeTab === 'permissions'
+              ? 'border-gray-900 text-gray-900'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
           >
             Permissions
           </button>
@@ -562,20 +572,18 @@ const AdminUsersPage = () => {
 
                 <div className="space-y-3">
                   {availablePermissions.map(permission => (
-                    <div 
+                    <div
                       key={permission.id}
-                      className={`p-3 rounded-md border ${
-                        selectedUser.permissions.includes(permission.id) 
-                          ? 'bg-gray-50 border-gray-200' 
-                          : 'bg-white border-gray-100'
-                      }`}
+                      className={`p-3 rounded-md border ${selectedUser.permissions.includes(permission.id)
+                        ? 'bg-gray-50 border-gray-200'
+                        : 'bg-white border-gray-100'
+                        }`}
                     >
                       <div className="flex items-start">
-                        <div className={`mt-0.5 mr-3 ${
-                          selectedUser.permissions.includes(permission.id) 
-                            ? 'text-gray-700' 
-                            : 'text-gray-300'
-                        }`}>
+                        <div className={`mt-0.5 mr-3 ${selectedUser.permissions.includes(permission.id)
+                          ? 'text-gray-700'
+                          : 'text-gray-300'
+                          }`}>
                           <ShieldIcon className="w-4 h-4" />
                         </div>
                         <div>
@@ -586,8 +594,8 @@ const AdminUsersPage = () => {
                             {permission.description}
                           </div>
                           <div className="text-xs mt-1">
-                            {selectedUser.permissions.includes(permission.id) 
-                              ? <span className="text-green-600">Granted</span> 
+                            {selectedUser.permissions.includes(permission.id)
+                              ? <span className="text-green-600">Granted</span>
                               : <span className="text-gray-400">Not granted</span>}
                           </div>
                         </div>
@@ -605,7 +613,7 @@ const AdminUsersPage = () => {
 
   const renderUserTable = () => {
     const sortedUsers = getSortedUsers();
-    
+
     return (
       <div className="overflow-x-auto rounded-lg">
         <table className="min-w-full border-collapse">
@@ -642,8 +650,8 @@ const AdminUsersPage = () => {
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
             {sortedUsers.map((user) => (
-              <tr 
-                key={user.id} 
+              <tr
+                key={user.id}
                 className="hover:bg-gray-50 cursor-pointer"
                 onClick={() => {
                   setSelectedUser(user);
@@ -677,7 +685,7 @@ const AdminUsersPage = () => {
                       }}
                       className="p-1 text-gray-400 hover:text-gray-600"
                     >
-                      <PencilIcon className="w-4 h-4" />
+                      <PencilSquareIcon className="w-4 h-4" />
                     </button>
                     <button
                       onClick={(e) => {
@@ -741,13 +749,14 @@ const AdminUsersPage = () => {
                     onClick={fetchData}
                     className="flex items-center px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
                   >
+                    <ArrowPathIcon className="h-4 w-4 mr-2" />
                     Refresh
                   </button>
                   <button
                     onClick={() => setView('create')}
                     className="flex items-center px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800"
                   >
-                    <PlusIcon className="w-3.5 h-3.5 mr-1.5" />
+                    <PlusIcon className="w-4 h-4" />
                     Create User
                   </button>
                 </div>
