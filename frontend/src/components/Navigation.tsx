@@ -368,7 +368,7 @@ function Sidebar() {
               />
             </>
           )}
-          
+
           {/* Admin Section - Only show if user has admin permissions */}
           {hasAdminPermission && (
             <>
