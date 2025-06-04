@@ -355,7 +355,6 @@ const ProfilePage: React.FC = () => {
             {activeTab === 'profile' && (
               <div>
                 <h2 className="text-lg font-medium text-gray-900 mb-1">Profile Information</h2>
-                <div className="text-gray-400 text-xs font-normal uppercase tracking-widest mb-4 mt-2">Current Username: {user?.username}</div>
                 <div className="mb-6">
                   <form onSubmit={handleSubmit}>
                     <div className="mb-4">
@@ -369,7 +368,7 @@ const ProfilePage: React.FC = () => {
                         value={formData.newUsername}
                         onChange={handleChange}
                         className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
-                        placeholder="Enter new username"
+                        placeholder={user?.username}
                       />
                       <p className="mt-1 text-xs text-gray-500">
                         Leave blank if you don't want to change your username
