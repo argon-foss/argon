@@ -224,26 +224,29 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
-      <div className="mb-6">
-        <p className="text-sm text-gray-600">{message}</p>
-      </div>
-      <div className="flex justify-end space-x-3">
-        <button
-          type="button"
-          onClick={onClose}
-          className="px-4 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors duration-150"
-          disabled={isSubmitting}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={isSubmitting}
-          className="px-4 py-2 text-xs font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSubmitting ? 'Deleting...' : confirmText}
-        </button>
+      <div className="p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">{title}</h3>
+        <div className="mb-6">
+          <p className="text-sm text-gray-600">{message}</p>
+        </div>
+        <div className="flex justify-end space-x-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors duration-100"
+            disabled={isSubmitting}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors duration-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? 'Deleting...' : confirmText}
+          </button>
+        </div>
       </div>
     </Modal>
   );
