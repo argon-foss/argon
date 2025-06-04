@@ -380,8 +380,8 @@ export default function Home() {
         ref={buttonRef}
         onClick={onClick}
         className={`tab-button relative z-5 cursor-pointer px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 outline-none focus:outline-none focus:ring-0 ${isActive
-            ? 'text-gray-800 border-none'
-            : 'text-gray-500 border-none hover:text-gray-700 hover:bg-gray-50'
+          ? 'text-gray-800 border-none'
+          : 'text-gray-500 border-none hover:text-gray-700 hover:bg-gray-50'
           }`}
       >
         {children}
@@ -638,8 +638,8 @@ export default function Home() {
                         <div className="flex items-center space-x-3">
                           <div className="flex-shrink-0">
                             <div className={`h-1.5 w-1.5 rounded-full ${server.status?.status?.state === 'running'
-                                ? 'bg-green-400'
-                                : 'bg-gray-300'
+                              ? 'bg-green-400'
+                              : 'bg-gray-300'
                               }`}></div>
                           </div>
                           <div className="min-w-0 flex items-center">
@@ -775,18 +775,18 @@ export default function Home() {
         {activeTab === 'overview' && (
           <div className="">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="border border-gray-200 rounded-md p-4">
+              <div className="border border-gray-200 bg-[#FFFFFF] rounded-md p-4">
                 <div className="text-gray-500 text-sm mb-1">Total servers in Project</div>
                 <div className="text-2xl font-medium">{stats.total}</div>
               </div>
-              <div className="border border-gray-200 rounded-md p-4">
+              <div className="border border-gray-200 bg-white rounded-md p-4">
                 <div className="text-gray-500 text-sm mb-1">Online</div>
                 <div className="flex items-center">
                   <div className="h-2 w-2 rounded-full bg-green-400 mr-2"></div>
                   <div className="text-2xl font-medium">{stats.online}</div>
                 </div>
               </div>
-              <div className="border border-gray-200 rounded-md p-4">
+              <div className="border border-gray-200 bg-white rounded-md p-4">
                 <div className="text-gray-500 text-sm mb-1">Offline</div>
                 <div className="flex items-center">
                   <div className="h-2 w-2 rounded-full bg-gray-300 mr-2"></div>
