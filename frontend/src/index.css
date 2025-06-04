@@ -152,17 +152,127 @@
     animation: slide-in 0.2s ease-out forwards;
 }
 
+/* GLOBAL SCROLLBAR HIDING - Applied to entire webapp */
 
-
-/* added this to remove the fucking scrolbar from navigation */
-
-.scrollbar-hide {
+/* Hide scrollbars globally for all elements */
+* {
     -ms-overflow-style: none;
     /* Internet Explorer 10+ */
     scrollbar-width: none;
     /* Firefox */
 }
 
+*::-webkit-scrollbar {
+    display: none;
+    /* Safari and Chrome */
+}
+
+/* Ensure body and html never show scrollbars */
+html,
+body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    overflow-x: hidden;
+    /* Prevent horizontal scrolling */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbars for common scrollable containers */
+div,
+main,
+section,
+article,
+aside,
+nav,
+header,
+footer {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+div::-webkit-scrollbar,
+main::-webkit-scrollbar,
+section::-webkit-scrollbar,
+article::-webkit-scrollbar,
+aside::-webkit-scrollbar,
+nav::-webkit-scrollbar,
+header::-webkit-scrollbar,
+footer::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbars for form elements and inputs */
+textarea,
+select,
+input {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+textarea::-webkit-scrollbar,
+select::-webkit-scrollbar,
+input::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbars for overflow containers */
+.overflow-auto,
+.overflow-scroll,
+.overflow-y-auto,
+.overflow-y-scroll,
+.overflow-x-auto,
+.overflow-x-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.overflow-auto::-webkit-scrollbar,
+.overflow-scroll::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-y-scroll::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-x-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* Utility class for explicit scrollbar hiding (kept for backwards compatibility) */
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
 .scrollbar-hide::-webkit-scrollbar {
     display: none;
-    /* Safari and Chrome */ }
+}
+
+/* Hide scrollbars for modals, dropdowns, and overlays */
+.modal,
+.dropdown,
+.overlay,
+.popup {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.modal::-webkit-scrollbar,
+.dropdown::-webkit-scrollbar,
+.overlay::-webkit-scrollbar,
+.popup::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbars for code blocks and pre elements */
+pre,
+code {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+pre::-webkit-scrollbar,
+code::-webkit-scrollbar {
+    display: none;
+}

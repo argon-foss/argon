@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ChevronRight, AlertCircle, Save, 
-  Server, Image, Code, Settings as SettingsIcon,
+import {
+  ChevronRight, AlertCircle, Save,
   RefreshCw, Check, X
 } from 'lucide-react';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -86,7 +85,7 @@ const ServerSettingsPage: React.FC = () => {
   const [server, setServer] = useState<ServerDetails | null>(null);
   const [config, setConfig] = useState<ServerConfiguration | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<{[key: string]: boolean}>({});
+  const [saving, setSaving] = useState<{ [key: string]: boolean }>({});
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -117,7 +116,7 @@ const ServerSettingsPage: React.FC = () => {
       const response = await fetch(`/api/servers/${id}?include[node]=true`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (!response.ok) throw new Error('Failed to fetch server details');
       const data = await response.json();
       setServer(data);
@@ -135,10 +134,10 @@ const ServerSettingsPage: React.FC = () => {
       const response = await fetch(`/api/servers/${id}/configuration`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (!response.ok) throw new Error('Failed to fetch server configuration');
       const data = await response.json();
-      
+
       // Parse available images if it's a string
       if (typeof data.dockerImage.available === 'string') {
         try {
@@ -148,9 +147,9 @@ const ServerSettingsPage: React.FC = () => {
           data.dockerImage.available = [];
         }
       }
-      
+
       setConfig(data);
-      
+
       // Initialize form data
       setFormData({
         name: data.name,
@@ -187,7 +186,7 @@ const ServerSettingsPage: React.FC = () => {
 
       const result = await response.json();
       showToast('Server name updated successfully');
-      
+
       // Update local state
       setServer(prev => prev ? { ...prev, name: result.name } : null);
       setConfig(prev => prev ? { ...prev, name: result.name } : null);
@@ -218,7 +217,7 @@ const ServerSettingsPage: React.FC = () => {
 
       const result = await response.json();
       showToast('Docker image updated successfully');
-      
+
       // Update local state
       setConfig(prev => prev ? {
         ...prev,
@@ -256,7 +255,7 @@ const ServerSettingsPage: React.FC = () => {
 
       const result = await response.json();
       showToast('Startup command updated successfully');
-      
+
       // Update local state
       setConfig(prev => prev ? {
         ...prev,
@@ -272,7 +271,7 @@ const ServerSettingsPage: React.FC = () => {
   // Reset form field to current value
   const resetField = (field: keyof typeof formData) => {
     if (!config) return;
-    
+
     switch (field) {
       case 'name':
         setFormData(prev => ({ ...prev, name: config.name }));
@@ -289,7 +288,7 @@ const ServerSettingsPage: React.FC = () => {
   // Check if field has changes
   const hasChanges = (field: keyof typeof formData) => {
     if (!config) return false;
-    
+
     switch (field) {
       case 'name':
         return formData.name !== config.name;
@@ -339,7 +338,7 @@ const ServerSettingsPage: React.FC = () => {
         <Toast key={toast.id} toast={toast} onDismiss={dismissToast} />
       ))}
 
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="mx-auto space-y-6">
         {/* Header Section */}
         <div className="space-y-3">
           {/* Breadcrumb */}
