@@ -1,6 +1,15 @@
 //@ts-nocheck
 import React, { useState, useEffect } from 'react';
-import { ChevronRightIcon, TrashIcon, PencilIcon, ArrowLeftIcon, PackageIcon, PlusIcon, InfoIcon, TagIcon } from 'lucide-react';
+import {
+  ChevronRightIcon,
+  TrashIcon,
+  PencilIcon,
+  ArrowLeftIcon,
+  CubeIcon as PackageIcon,
+  PlusIcon,
+  InformationCircleIcon as InfoIcon,
+  TagIcon
+} from '@heroicons/react/24/outline';
 import { z } from 'zod';
 import AdminBar from '../../components/AdminBar';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -120,24 +129,24 @@ const DockerImagesForm: React.FC<{
   const removeImage = (index: number) => {
     const newImages = images.filter((_, i) => i !== index);
     let newDefaultImage = defaultImage;
-    
+
     // If we're removing the default image, set a new default
     if (newImages.length > 0 && !newImages.some(img => img.image === defaultImage)) {
       newDefaultImage = newImages[0].image;
     }
-    
+
     onChange(newImages, newDefaultImage);
   };
 
   const updateImage = (index: number, field: keyof typeof images[0], value: string) => {
     const newImages = images.map((img, i) => i === index ? { ...img, [field]: value } : img);
-    
+
     // If updating the image value of the default, update the default too
     let newDefaultImage = defaultImage;
     if (field === 'image' && images[index].image === defaultImage) {
       newDefaultImage = value;
     }
-    
+
     onChange(newImages, newDefaultImage);
   };
 
@@ -178,22 +187,21 @@ const DockerImagesForm: React.FC<{
                   placeholder="Display Name (e.g., Java 17)"
                 />
               </div>
-              
+
               <div className="flex items-center space-x-3">
                 <button
                   type="button"
                   onClick={() => setAsDefault(image.image)}
-                  className={`px-2 py-1 text-xs font-medium rounded-md ${
-                    defaultImage === image.image 
-                      ? 'bg-green-50 text-green-600 border border-green-200' 
+                  className={`px-2 py-1 text-xs font-medium rounded-md ${defaultImage === image.image
+                      ? 'bg-green-50 text-green-600 border border-green-200'
                       : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   {defaultImage === image.image ? 'Default Image' : 'Set as Default'}
                 </button>
               </div>
             </div>
-            
+
             <button
               type="button"
               onClick={() => removeImage(index)}
@@ -239,7 +247,7 @@ const FeaturesForm: React.FC<{
   const updateFeature = (index: number, field: string, value: any) => {
     onChange(features.map((f, i) => {
       if (i !== index) return f;
-      
+
       // Handle nested fields
       if (field.includes('.')) {
         const [parent, child] = field.split('.');
@@ -251,7 +259,7 @@ const FeaturesForm: React.FC<{
           }
         };
       }
-      
+
       return { ...f, [field]: value };
     }));
   };
@@ -290,7 +298,7 @@ const FeaturesForm: React.FC<{
                   <option value="optional">Optional</option>
                 </select>
               </div>
-              
+
               <input
                 type="text"
                 value={feature.description || ''}
@@ -298,7 +306,7 @@ const FeaturesForm: React.FC<{
                 className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
                 placeholder="Description (e.g., Accept the Minecraft EULA)"
               />
-              
+
               <input
                 type="text"
                 value={feature.iconPath || ''}
@@ -306,12 +314,12 @@ const FeaturesForm: React.FC<{
                 className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
                 placeholder="Icon Path (optional, e.g., /assets/icons/document.svg)"
               />
-              
+
               {feature.uiData && (
                 <>
                   <div className="p-3 bg-gray-50 rounded-md">
                     <div className="text-xs font-medium text-gray-700 mb-2">UI Component Configuration</div>
-                    
+
                     <select
                       value={feature.uiData.component}
                       onChange={(e) => updateFeature(index, 'uiData.component', e.target.value)}
@@ -320,15 +328,15 @@ const FeaturesForm: React.FC<{
                       <option value="checkbox">Checkbox</option>
                       <option value="select">Select (Dropdown)</option>
                     </select>
-                    
+
                     {feature.uiData.component === 'checkbox' && (
                       <div className="space-y-2">
                         <input
                           type="text"
                           value={feature.uiData.props?.label || ''}
-                          onChange={(e) => updateFeature(index, 'uiData.props', { 
-                            ...feature.uiData.props, 
-                            label: e.target.value 
+                          onChange={(e) => updateFeature(index, 'uiData.props', {
+                            ...feature.uiData.props,
+                            label: e.target.value
                           })}
                           className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
                           placeholder="Checkbox Label (e.g., I accept the EULA)"
@@ -336,29 +344,29 @@ const FeaturesForm: React.FC<{
                         <input
                           type="text"
                           value={feature.uiData.props?.link || ''}
-                          onChange={(e) => updateFeature(index, 'uiData.props', { 
-                            ...feature.uiData.props, 
-                            link: e.target.value 
+                          onChange={(e) => updateFeature(index, 'uiData.props', {
+                            ...feature.uiData.props,
+                            link: e.target.value
                           })}
                           className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
                           placeholder="Link URL (optional, e.g., https://minecraft.net/eula)"
                         />
                       </div>
                     )}
-                    
+
                     {feature.uiData.component === 'select' && (
                       <div className="space-y-2">
                         <input
                           type="text"
                           value={feature.uiData.props?.label || ''}
-                          onChange={(e) => updateFeature(index, 'uiData.props', { 
-                            ...feature.uiData.props, 
-                            label: e.target.value 
+                          onChange={(e) => updateFeature(index, 'uiData.props', {
+                            ...feature.uiData.props,
+                            label: e.target.value
                           })}
                           className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
                           placeholder="Select Label (e.g., Java Version)"
                         />
-                        
+
                         <div className="text-xs text-gray-700 mt-2 mb-1">Options:</div>
                         {feature.uiData.props?.options?.map((option, optIdx) => (
                           <div key={optIdx} className="flex items-center space-x-2">
@@ -368,9 +376,9 @@ const FeaturesForm: React.FC<{
                               onChange={(e) => {
                                 const newOptions = [...(feature.uiData.props?.options || [])];
                                 newOptions[optIdx] = { ...option, value: e.target.value };
-                                updateFeature(index, 'uiData.props', { 
-                                  ...feature.uiData.props, 
-                                  options: newOptions 
+                                updateFeature(index, 'uiData.props', {
+                                  ...feature.uiData.props,
+                                  options: newOptions
                                 });
                               }}
                               className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
@@ -382,9 +390,9 @@ const FeaturesForm: React.FC<{
                               onChange={(e) => {
                                 const newOptions = [...(feature.uiData.props?.options || [])];
                                 newOptions[optIdx] = { ...option, label: e.target.value };
-                                updateFeature(index, 'uiData.props', { 
-                                  ...feature.uiData.props, 
-                                  options: newOptions 
+                                updateFeature(index, 'uiData.props', {
+                                  ...feature.uiData.props,
+                                  options: newOptions
                                 });
                               }}
                               className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
@@ -394,9 +402,9 @@ const FeaturesForm: React.FC<{
                               type="button"
                               onClick={() => {
                                 const newOptions = feature.uiData.props?.options?.filter((_, i) => i !== optIdx) || [];
-                                updateFeature(index, 'uiData.props', { 
-                                  ...feature.uiData.props, 
-                                  options: newOptions 
+                                updateFeature(index, 'uiData.props', {
+                                  ...feature.uiData.props,
+                                  options: newOptions
                                 });
                               }}
                               className="p-1 text-gray-400 hover:text-red-500"
@@ -405,14 +413,14 @@ const FeaturesForm: React.FC<{
                             </button>
                           </div>
                         ))}
-                        
+
                         <button
                           type="button"
                           onClick={() => {
                             const options = feature.uiData.props?.options || [];
-                            updateFeature(index, 'uiData.props', { 
-                              ...feature.uiData.props, 
-                              options: [...options, { value: '', label: '' }] 
+                            updateFeature(index, 'uiData.props', {
+                              ...feature.uiData.props,
+                              options: [...options, { value: '', label: '' }]
                             });
                           }}
                           className="px-2 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 mt-1"
@@ -425,7 +433,7 @@ const FeaturesForm: React.FC<{
                 </>
               )}
             </div>
-            
+
             <button
               type="button"
               onClick={() => removeFeature(index)}
@@ -456,7 +464,7 @@ const MetaForm: React.FC<{
       <div className="flex items-center justify-between">
         <label className="block text-xs font-medium text-gray-700">Metadata</label>
       </div>
-      
+
       <div className="border border-gray-200 rounded-md p-3 space-y-3">
         <div className="grid grid-cols-2 gap-2">
           <div>
@@ -479,7 +487,7 @@ const MetaForm: React.FC<{
             />
           </div>
         </div>
-        
+
         <div>
           <label className="block text-xs text-gray-500 mb-1">Website</label>
           <input
@@ -490,7 +498,7 @@ const MetaForm: React.FC<{
             placeholder="https://example.com"
           />
         </div>
-        
+
         <div>
           <label className="block text-xs text-gray-500 mb-1">Support URL</label>
           <input
@@ -564,7 +572,7 @@ const EnvironmentVariableForm: React.FC<{
                   placeholder="Default Value"
                 />
               </div>
-              
+
               <input
                 type="text"
                 value={variable.description || ''}
@@ -572,7 +580,7 @@ const EnvironmentVariableForm: React.FC<{
                 className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
                 placeholder="Description (optional)"
               />
-              
+
               <input
                 type="text"
                 value={variable.rules}
@@ -591,7 +599,7 @@ const EnvironmentVariableForm: React.FC<{
                   />
                   <span className="text-xs">Required</span>
                 </label>
-                
+
                 <label className="flex items-center space-x-2">
                   <input
                     type="checkbox"
@@ -601,7 +609,7 @@ const EnvironmentVariableForm: React.FC<{
                   />
                   <span className="text-xs">User Viewable</span>
                 </label>
-                
+
                 <label className="flex items-center space-x-2">
                   <input
                     type="checkbox"
@@ -613,7 +621,7 @@ const EnvironmentVariableForm: React.FC<{
                 </label>
               </div>
             </div>
-            
+
             <button
               type="button"
               onClick={() => removeVariable(index)}
@@ -678,7 +686,7 @@ const ConfigFilesForm: React.FC<{
                 className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
                 placeholder="File Path (e.g., server.properties)"
               />
-              
+
               <textarea
                 value={file.content}
                 onChange={(e) => updateFile(index, 'content', e.target.value)}
@@ -687,7 +695,7 @@ const ConfigFilesForm: React.FC<{
                 rows={5}
               />
             </div>
-            
+
             <button
               type="button"
               onClick={() => removeFile(index)}
@@ -727,14 +735,14 @@ const ContainerList: React.FC<{
 
   const fetchAllContainers = async () => {
     if (!unitId) return;
-    
+
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/cargo/container', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           // If we get a 404, it might be that there are no containers yet
@@ -743,7 +751,7 @@ const ContainerList: React.FC<{
         }
         throw new Error('Failed to fetch containers');
       }
-      
+
       const data = await response.json();
       setAllContainers(data);
     } catch (err) {
@@ -755,16 +763,16 @@ const ContainerList: React.FC<{
 
   const assignContainer = async (containerId: string) => {
     if (!unitId) return;
-    
+
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/units/${unitId}/containers/${containerId}`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) throw new Error('Failed to assign container');
-      
+
       onRefresh();
       setShowContainerSelector(false);
     } catch (err) {
@@ -774,16 +782,16 @@ const ContainerList: React.FC<{
 
   const removeContainer = async (containerId: string) => {
     if (!unitId) return;
-    
+
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/units/${unitId}/containers/${containerId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) throw new Error('Failed to remove container');
-      
+
       onRefresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove container');
@@ -827,7 +835,7 @@ const ContainerList: React.FC<{
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {availableContainers.length > 0 ? (
                 availableContainers.map(container => (
-                  <div 
+                  <div
                     key={container.id}
                     className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-md border border-gray-100"
                   >
@@ -866,7 +874,7 @@ const ContainerList: React.FC<{
         {assignedContainers.length > 0 ? (
           <div className="space-y-2">
             {assignedContainers.map(container => (
-              <div 
+              <div
                 key={container.id}
                 className="border border-gray-200 rounded-md p-3"
               >
@@ -874,7 +882,7 @@ const ContainerList: React.FC<{
                   <div>
                     <div className="text-sm font-medium">{container.name}</div>
                     <div className="text-xs text-gray-500 mt-1">{container.description}</div>
-                    
+
                     {container.items && container.items.length > 0 && (
                       <div className="mt-2">
                         <div className="text-xs font-medium text-gray-700 mb-1">Items:</div>
@@ -918,7 +926,7 @@ const AdminUnitsPage: React.FC = () => {
   const [view, setView] = useState<View>('list');
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [assignedContainers, setAssignedContainers] = useState<Container[]>([]);
-  
+
   // V3: Updated initial form state
   const [formData, setFormData] = useState<Omit<Unit, 'id' | 'createdAt' | 'updatedAt'>>({
     name: '',
@@ -953,7 +961,7 @@ const AdminUnitsPage: React.FC = () => {
       supportUrl: ''
     }
   });
-  
+
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -966,9 +974,9 @@ const AdminUnitsPage: React.FC = () => {
       const response = await fetch('/api/units', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) throw new Error('Failed to fetch units');
-      
+
       const data = await response.json();
       setUnits(data);
       setLoading(false);
@@ -984,9 +992,9 @@ const AdminUnitsPage: React.FC = () => {
       const response = await fetch(`/api/units/${unitId}/containers`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) throw new Error('Failed to fetch unit containers');
-      
+
       const data = await response.json();
       setAssignedContainers(data);
     } catch (err) {
@@ -1004,10 +1012,10 @@ const AdminUnitsPage: React.FC = () => {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    
+
     try {
       const validatedData = unitSchema.omit({ id: true, createdAt: true, updatedAt: true }).parse(formData);
-      
+
       const token = localStorage.getItem('token');
       const response = await fetch('/api/units', {
         method: 'POST',
@@ -1042,7 +1050,7 @@ const AdminUnitsPage: React.FC = () => {
 
     try {
       const validatedData = unitSchema.partial().omit({ id: true, createdAt: true, updatedAt: true }).parse(formData);
-      
+
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/units/${selectedUnit.id}`, {
         method: 'PATCH',
@@ -1144,43 +1152,43 @@ const AdminUnitsPage: React.FC = () => {
       features: unit.features,
       meta: unit.meta
     };
-    
+
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
       type: 'application/json'
     });
     saveAs(blob, `unit-${unit.shortName}.json`);
   };
-  
+
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length) return;
-    
+
     const file = e.target.files[0];
     const reader = new FileReader();
-    
+
     reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
         const importedUnit = JSON.parse(content);
-        
+
         // V3: Handle older export formats
         if (importedUnit.dockerImage && (!importedUnit.dockerImages || importedUnit.dockerImages.length === 0)) {
-          importedUnit.dockerImages = [{ 
-            image: importedUnit.dockerImage, 
-            displayName: 'Default Image' 
+          importedUnit.dockerImages = [{
+            image: importedUnit.dockerImage,
+            displayName: 'Default Image'
           }];
           importedUnit.defaultDockerImage = importedUnit.dockerImage;
         }
-        
+
         // V3: Ensure meta is present
         if (!importedUnit.meta) {
           importedUnit.meta = { version: 'argon/unit:v3' };
         }
-        
+
         // V3: Ensure features array exists
         if (!importedUnit.features) {
           importedUnit.features = [];
         }
-        
+
         const token = localStorage.getItem('token');
         const response = await fetch('/api/units/import', {
           method: 'POST',
@@ -1194,28 +1202,28 @@ const AdminUnitsPage: React.FC = () => {
             return formData;
           })()
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Import failed');
         }
-        
+
         await fetchUnits();
         setView('list');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to import unit');
       }
     };
-    
+
     reader.readAsText(file);
   };
 
   const handleImportEgg = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length) return;
-    
+
     const file = e.target.files[0];
     const reader = new FileReader();
-    
+
     reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
@@ -1224,20 +1232,20 @@ const AdminUnitsPage: React.FC = () => {
         // Clean it
         if (typeof rawegg === 'string') {
           rawegg = rawegg
-                    .replace('{{', '%')
-                    .replace('}}', '%');
+            .replace('{{', '%')
+            .replace('}}', '%');
           rawegg = JSON.parse(rawegg);
         }
-        
+
         // V3: Convert Pterodactyl egg to Argon unit with v3 features
         const unit = {
           name: rawegg.name,
           shortName: rawegg.name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
           description: rawegg.description,
           // V3: Convert single image to docker images array
-          dockerImages: [{ 
-            image: Object.values(rawegg.docker_images)[0] as string, 
-            displayName: 'Default Image' 
+          dockerImages: [{
+            image: Object.values(rawegg.docker_images)[0] as string,
+            displayName: 'Default Image'
           }],
           defaultDockerImage: Object.values(rawegg.docker_images)[0] as string,
           dockerImage: Object.values(rawegg.docker_images)[0] as string,
@@ -1299,19 +1307,19 @@ const AdminUnitsPage: React.FC = () => {
           },
           body: JSON.stringify(unit)
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Import failed');
         }
-        
+
         await fetchUnits();
         setView('list');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to import Pterodactyl egg');
       }
     };
-    
+
     reader.readAsText(file);
   };
 
@@ -1363,7 +1371,7 @@ const AdminUnitsPage: React.FC = () => {
       </div>
 
       {/* V3: Docker Images Configuration */}
-      <DockerImagesForm 
+      <DockerImagesForm
         images={formData.dockerImages}
         defaultImage={formData.defaultDockerImage}
         onChange={(images, defaultImage) => setFormData({
@@ -1389,53 +1397,53 @@ const AdminUnitsPage: React.FC = () => {
       {/* V3: Enhanced Startup Configuration */}
       <div className="space-y-3 p-3 border border-gray-200 rounded-md">
         <label className="block text-xs font-medium text-gray-700">Startup Configuration</label>
-        
+
         <div className="flex items-center space-x-2">
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
               checked={formData.startup.userEditable}
-              onChange={(e) => setFormData({ 
-                ...formData, 
-                startup: { 
-                  ...formData.startup, 
-                  userEditable: e.target.checked 
-                } 
+              onChange={(e) => setFormData({
+                ...formData,
+                startup: {
+                  ...formData.startup,
+                  userEditable: e.target.checked
+                }
               })}
               className="text-xs"
             />
             <span className="text-xs">User Editable</span>
           </label>
         </div>
-        
+
         <div className="space-y-1">
           <label className="block text-xs text-gray-500">Ready Regex (detects when server is online)</label>
           <input
             type="text"
             value={formData.startup.readyRegex || ''}
-            onChange={(e) => setFormData({ 
-              ...formData, 
-              startup: { 
-                ...formData.startup, 
-                readyRegex: e.target.value 
-              } 
+            onChange={(e) => setFormData({
+              ...formData,
+              startup: {
+                ...formData.startup,
+                readyRegex: e.target.value
+              }
             })}
             className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
             placeholder="e.g., Done \(.*\)!"
           />
         </div>
-        
+
         <div className="space-y-1">
           <label className="block text-xs text-gray-500">Stop Command (gracefully stops the server)</label>
           <input
             type="text"
             value={formData.startup.stopCommand || ''}
-            onChange={(e) => setFormData({ 
-              ...formData, 
-              startup: { 
-                ...formData.startup, 
-                stopCommand: e.target.value 
-              } 
+            onChange={(e) => setFormData({
+              ...formData,
+              startup: {
+                ...formData.startup,
+                stopCommand: e.target.value
+              }
             })}
             className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
             placeholder="e.g., stop"
@@ -1444,7 +1452,7 @@ const AdminUnitsPage: React.FC = () => {
       </div>
 
       {/* Environment Variables */}
-      <EnvironmentVariableForm 
+      <EnvironmentVariableForm
         variables={formData.environmentVariables}
         onChange={(variables) => setFormData({ ...formData, environmentVariables: variables })}
       />
@@ -1462,9 +1470,9 @@ const AdminUnitsPage: React.FC = () => {
           <input
             type="text"
             value={formData.installScript.dockerImage}
-            onChange={(e) => setFormData({ 
-              ...formData, 
-              installScript: { ...formData.installScript, dockerImage: e.target.value } 
+            onChange={(e) => setFormData({
+              ...formData,
+              installScript: { ...formData.installScript, dockerImage: e.target.value }
             })}
             className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
             placeholder="Install Docker Image"
@@ -1473,9 +1481,9 @@ const AdminUnitsPage: React.FC = () => {
           <input
             type="text"
             value={formData.installScript.entrypoint}
-            onChange={(e) => setFormData({ 
-              ...formData, 
-              installScript: { ...formData.installScript, entrypoint: e.target.value } 
+            onChange={(e) => setFormData({
+              ...formData,
+              installScript: { ...formData.installScript, entrypoint: e.target.value }
             })}
             className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
             placeholder="Entrypoint (default: bash)"
@@ -1484,9 +1492,9 @@ const AdminUnitsPage: React.FC = () => {
         </div>
         <textarea
           value={formData.installScript.script}
-          onChange={(e) => setFormData({ 
-            ...formData, 
-            installScript: { ...formData.installScript, script: e.target.value } 
+          onChange={(e) => setFormData({
+            ...formData,
+            installScript: { ...formData.installScript, script: e.target.value }
           })}
           className="mt-2 block w-full px-3 py-2 text-xs border border-gray-200 rounded-md font-mono"
           placeholder="Install script commands..."
@@ -1510,10 +1518,10 @@ const AdminUnitsPage: React.FC = () => {
       {/* Cargo Containers Section */}
       {type === 'edit' && selectedUnit?.id && (
         <div className="pt-4 border-t border-gray-100">
-          <ContainerList 
-            unitId={selectedUnit.id} 
-            assignedContainers={assignedContainers} 
-            onRefresh={() => fetchUnitContainers(selectedUnit.id!)} 
+          <ContainerList
+            unitId={selectedUnit.id}
+            assignedContainers={assignedContainers}
+            onRefresh={() => fetchUnitContainers(selectedUnit.id!)}
           />
         </div>
       )}
@@ -1645,7 +1653,7 @@ const AdminUnitsPage: React.FC = () => {
                 <div className="text-xs text-gray-500">Default Startup Command</div>
                 <div className="text-sm font-mono mt-1 break-all">{selectedUnit.defaultStartupCommand}</div>
               </div>
-              
+
               {/* V3: Enhanced startup details */}
               <div className="grid grid-cols-2 gap-4 mt-3">
                 <div>
@@ -1756,21 +1764,20 @@ const AdminUnitsPage: React.FC = () => {
                         <div className="text-sm font-medium">{feature.name}</div>
                         <div className="text-xs text-gray-500 mt-1">{feature.description}</div>
                         <div className="mt-2 flex space-x-3">
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            feature.type === 'required' 
-                              ? 'bg-orange-50 text-orange-700' 
+                          <span className={`text-xs px-2 py-1 rounded ${feature.type === 'required'
+                              ? 'bg-orange-50 text-orange-700'
                               : 'bg-blue-50 text-blue-700'
-                          }`}>
+                            }`}>
                             {feature.type === 'required' ? 'Required' : 'Optional'}
                           </span>
-                          
+
                           {feature.uiData && (
                             <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">
                               {feature.uiData.component} component
                             </span>
                           )}
                         </div>
-                        
+
                         {feature.uiData?.props && (
                           <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded">
                             <div className="font-medium mb-1">Component Properties:</div>
@@ -1778,8 +1785,8 @@ const AdminUnitsPage: React.FC = () => {
                               {Object.entries(feature.uiData.props).map(([key, value]) => (
                                 <li key={key}>
                                   <span className="font-medium">{key}:</span> {
-                                    typeof value === 'object' 
-                                      ? JSON.stringify(value) 
+                                    typeof value === 'object'
+                                      ? JSON.stringify(value)
                                       : String(value)
                                   }
                                 </li>
@@ -1815,16 +1822,16 @@ const AdminUnitsPage: React.FC = () => {
                   </div>
                 )}
               </div>
-              
+
               {(selectedUnit.meta?.website || selectedUnit.meta?.supportUrl) && (
                 <div className="grid grid-cols-2 gap-4 mt-2">
                   {selectedUnit.meta?.website && (
                     <div>
                       <div className="text-xs text-gray-500">Website</div>
-                      <a 
-                        href={selectedUnit.meta.website} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
+                      <a
+                        href={selectedUnit.meta.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-sm text-blue-600 hover:underline mt-1 inline-block"
                       >
                         {selectedUnit.meta.website}
@@ -1834,10 +1841,10 @@ const AdminUnitsPage: React.FC = () => {
                   {selectedUnit.meta?.supportUrl && (
                     <div>
                       <div className="text-xs text-gray-500">Support URL</div>
-                      <a 
-                        href={selectedUnit.meta.supportUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
+                      <a
+                        href={selectedUnit.meta.supportUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-sm text-blue-600 hover:underline mt-1 inline-block"
                       >
                         {selectedUnit.meta.supportUrl}
@@ -1852,10 +1859,10 @@ const AdminUnitsPage: React.FC = () => {
           {/* Cargo Containers Section */}
           <div className="pt-4 border-t border-gray-100">
             <div className="text-xs font-medium text-gray-900 mb-3">Cargo Containers</div>
-            <ContainerList 
-              unitId={selectedUnit.id} 
-              assignedContainers={assignedContainers} 
-              onRefresh={() => fetchUnitContainers(selectedUnit.id!)} 
+            <ContainerList
+              unitId={selectedUnit.id}
+              assignedContainers={assignedContainers}
+              onRefresh={() => fetchUnitContainers(selectedUnit.id!)}
             />
           </div>
 
@@ -1899,10 +1906,10 @@ const AdminUnitsPage: React.FC = () => {
       </div>
     );
   };
-  
+
   // Main render
   if (loading) return <LoadingSpinner />;
-  
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminBar />
@@ -1964,7 +1971,7 @@ const AdminUnitsPage: React.FC = () => {
                       <div className="text-sm font-medium text-gray-900">{unit.name}</div>
                       <div className="text-xs text-gray-500 mt-1">
                         {unit.shortName} • {
-                          unit.meta?.version === 'argon/unit:v3' 
+                          unit.meta?.version === 'argon/unit:v3'
                             ? (
                               <>
                                 {unit.dockerImages && unit.dockerImages.length > 1

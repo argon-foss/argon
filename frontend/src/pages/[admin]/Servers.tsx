@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRightIcon, PlusIcon, TrashIcon, PencilIcon, ArrowLeftIcon } from 'lucide-react';
+import {
+  ChevronRightIcon,
+  PlusIcon,
+  TrashIcon,
+  PencilIcon,
+  ArrowLeftIcon
+} from '@heroicons/react/24/outline';
 import AdminBar from '../../components/AdminBar';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
@@ -142,11 +148,11 @@ const AdminServersPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>('list');
   const [selectedServer, setSelectedServer] = useState<Server | null>(null);
-  const [selectedUnitDockerImages, setSelectedUnitDockerImages] = useState<Array<{image: string, displayName: string}>>([]);
+  const [selectedUnitDockerImages, setSelectedUnitDockerImages] = useState<Array<{ image: string, displayName: string }>>([]);
   const [isUnitV3, setIsUnitV3] = useState(false);
-  const [editUnitDockerImages, setEditUnitDockerImages] = useState<Array<{image: string, displayName: string}>>([]);
+  const [editUnitDockerImages, setEditUnitDockerImages] = useState<Array<{ image: string, displayName: string }>>([]);
   const [isEditUnitV3, setIsEditUnitV3] = useState(false);
-  
+
   // Deployment tab state - moved to top level
   const [deploymentTab, setDeploymentTab] = useState<'nodes' | 'regions'>('nodes');
   const [loadingRegions, setLoadingRegions] = useState(false);
@@ -162,7 +168,7 @@ const AdminServersPage = () => {
     diskMiB: 10240,
     cpuPercent: 100
   });
-  
+
   // Form state for editing servers (simplified compared to create form)
   const [editFormData, setEditFormData] = useState<EditFormData>({
     name: '',
@@ -171,9 +177,9 @@ const AdminServersPage = () => {
     diskMiB: 0,
     cpuPercent: 0
   });
-  
+
   const [formError, setFormError] = useState<string | null>(null);
-  
+
   // Search state
   const [userSearch, setUserSearch] = useState('');
   const [unitSearch, setUnitSearch] = useState('');
@@ -209,14 +215,14 @@ const AdminServersPage = () => {
   }, [view]);
 
   useEffect(() => {
-    const filtered = users.filter(user => 
+    const filtered = users.filter(user =>
       user.username.toLowerCase().includes(userSearch.toLowerCase())
     );
     setFilteredUsers(filtered);
   }, [userSearch, users]);
 
   useEffect(() => {
-    const filtered = units.filter(unit => 
+    const filtered = units.filter(unit =>
       unit.name.toLowerCase().includes(unitSearch.toLowerCase()) ||
       unit.shortName.toLowerCase().includes(unitSearch.toLowerCase())
     );
@@ -229,10 +235,10 @@ const AdminServersPage = () => {
       const response = await fetch(`/api/units/${unitId}/docker-images`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
-        
+
         // Check if this is a v3 unit with multiple Docker images
         if (data.dockerImages && Array.isArray(data.dockerImages) && data.dockerImages.length > 0) {
           setEditUnitDockerImages(data.dockerImages);
@@ -241,9 +247,9 @@ const AdminServersPage = () => {
           // This is a v2 unit with a single Docker image
           const unitData = units.find(u => u.id === unitId);
           if (unitData) {
-            setEditUnitDockerImages([{ 
-              image: unitData.dockerImage, 
-              displayName: 'Default Image' 
+            setEditUnitDockerImages([{
+              image: unitData.dockerImage,
+              displayName: 'Default Image'
             }]);
           } else {
             setEditUnitDockerImages([]);
@@ -254,9 +260,9 @@ const AdminServersPage = () => {
         // Fallback to v2 behavior
         const unitData = units.find(u => u.id === unitId);
         if (unitData) {
-          setEditUnitDockerImages([{ 
-            image: unitData.dockerImage, 
-            displayName: 'Default Image' 
+          setEditUnitDockerImages([{
+            image: unitData.dockerImage,
+            displayName: 'Default Image'
           }]);
         } else {
           setEditUnitDockerImages([]);
@@ -277,15 +283,15 @@ const AdminServersPage = () => {
       const response = await fetch(`/api/units/${unitId}/docker-images`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
-        
+
         // Check if this is a v3 unit with multiple Docker images
         if (data.dockerImages && Array.isArray(data.dockerImages) && data.dockerImages.length > 0) {
           setSelectedUnitDockerImages(data.dockerImages);
           setIsUnitV3(true);
-          
+
           // Auto-select the default Docker image
           if (data.defaultDockerImage) {
             updateFormData({ dockerImage: data.defaultDockerImage });
@@ -296,9 +302,9 @@ const AdminServersPage = () => {
           // This is a v2 unit with a single Docker image
           const unitData = units.find(u => u.id === unitId);
           if (unitData) {
-            setSelectedUnitDockerImages([{ 
-              image: unitData.dockerImage, 
-              displayName: 'Default Image' 
+            setSelectedUnitDockerImages([{
+              image: unitData.dockerImage,
+              displayName: 'Default Image'
             }]);
             updateFormData({ dockerImage: unitData.dockerImage });
           } else {
@@ -310,9 +316,9 @@ const AdminServersPage = () => {
         // Fallback to v2 behavior
         const unitData = units.find(u => u.id === unitId);
         if (unitData) {
-          setSelectedUnitDockerImages([{ 
-            image: unitData.dockerImage, 
-            displayName: 'Default Image' 
+          setSelectedUnitDockerImages([{
+            image: unitData.dockerImage,
+            displayName: 'Default Image'
           }]);
           updateFormData({ dockerImage: unitData.dockerImage });
         } else {
@@ -334,11 +340,11 @@ const AdminServersPage = () => {
       const response = await fetch('/api/regions', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch regions');
       }
-      
+
       const data = await response.json();
       setAvailableRegions(data);
     } catch (err) {
@@ -355,7 +361,7 @@ const AdminServersPage = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       const headers = { 'Authorization': `Bearer ${token}` };
-      
+
       const [serversRes, nodesRes, unitsRes, usersRes, regionsRes] = await Promise.all([
         fetch('/api/servers?include[node]=true&include[unit]=true&include[user]=true', { headers }),
         fetch('/api/nodes', { headers }),
@@ -363,32 +369,32 @@ const AdminServersPage = () => {
         fetch('/api/users', { headers }),
         fetch('/api/regions', { headers })
       ]);
-      
+
       if (!serversRes.ok) throw new Error('Failed to fetch servers');
       if (!nodesRes.ok) throw new Error('Failed to fetch nodes');
       if (!unitsRes.ok) throw new Error('Failed to fetch units');
       if (!usersRes.ok) throw new Error('Failed to fetch users');
       // Don't throw on regions error, as it's optional
-      
+
       const [serversData, nodesData, unitsData, usersData] = await Promise.all([
         serversRes.json(),
         nodesRes.json(),
         unitsRes.json(),
         usersRes.json()
       ]);
-      
+
       // Try to get regions data if available
       let regionsData = [];
       if (regionsRes.ok) {
         regionsData = await regionsRes.json();
         setAvailableRegions(regionsData);
       }
-  
+
       setServers(serversData);
       setNodes(nodesData);
       setUnits(unitsData);
       setUsers(usersData);
-      
+
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -400,23 +406,23 @@ const AdminServersPage = () => {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    
+
     try {
       // Extract data from form and determine if we're using region-based or node-based deployment
       const payload = { ...createFormData };
       const isRegionBased = !!payload.regionId;
-      
+
       // If using region-based deployment, we don't need nodeId or allocationId
       if (isRegionBased) {
         delete payload.nodeId;
         delete payload.allocationId;
       }
-      
+
       // If no startup command is provided, remove it from the payload
       if (!payload.startupCommand) {
         delete payload.startupCommand;
       }
-      
+
       const token = localStorage.getItem('token');
       const response = await fetch('/api/servers', {
         method: 'POST',
@@ -426,12 +432,12 @@ const AdminServersPage = () => {
         },
         body: JSON.stringify(payload)
       });
-  
+
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || 'Failed to create server');
       }
-  
+
       await fetchData();
       setView('list');
       // Reset form data including Docker image and startup command
@@ -462,37 +468,37 @@ const AdminServersPage = () => {
     try {
       // Create an object with only the changed values
       const changesOnly: EditFormData = {};
-      
+
       if (editFormData.name !== selectedServer.name) {
         changesOnly.name = editFormData.name;
       }
-      
+
       if (editFormData.unitId !== selectedServer.unitId) {
         changesOnly.unitId = editFormData.unitId;
       }
-      
+
       if (editFormData.memoryMiB !== selectedServer.memoryMiB) {
         changesOnly.memoryMiB = editFormData.memoryMiB;
       }
-      
+
       if (editFormData.diskMiB !== selectedServer.diskMiB) {
         changesOnly.diskMiB = editFormData.diskMiB;
       }
-      
+
       if (editFormData.cpuPercent !== selectedServer.cpuPercent) {
         changesOnly.cpuPercent = editFormData.cpuPercent;
       }
-      
+
       // V3: Add Docker image changes
       if (editFormData.dockerImage !== selectedServer.status?.image) {
         changesOnly.dockerImage = editFormData.dockerImage;
       }
-      
+
       // V3: Add startup command changes
       if (editFormData.startupCommand !== selectedServer.status?.startup_command) {
         changesOnly.startupCommand = editFormData.startupCommand;
       }
-      
+
       // If nothing changed, just go back to view
       if (Object.keys(changesOnly).length === 0) {
         setView('view');
@@ -514,16 +520,16 @@ const AdminServersPage = () => {
         const data = await response.json();
         throw new Error(data.error || 'Failed to update server');
       }
-      
+
       // Refresh server list and select the updated server
       await fetchData();
-      
+
       // Find the updated server in the refreshed list
       const refreshedServer = servers.find(s => s.id === selectedServer.id);
       if (refreshedServer) {
         setSelectedServer(refreshedServer);
       }
-      
+
       setView('view');
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to update server');
@@ -573,7 +579,7 @@ const AdminServersPage = () => {
             <p className="text-xs text-red-600">{formError}</p>
           </div>
         )}
-        
+
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-700">
             Name
@@ -587,18 +593,17 @@ const AdminServersPage = () => {
             required
           />
         </div>
-  
+
         {/* Deployment Method Tabs */}
         <div className="border-b border-gray-200 mb-2">
           <div className="flex">
             <button
               type="button"
               onClick={() => setDeploymentTab('nodes')}
-              className={`pb-2 text-xs font-medium relative ${
-                deploymentTab === 'nodes'
+              className={`pb-2 text-xs font-medium relative ${deploymentTab === 'nodes'
                   ? 'text-gray-800 border-indigo-600'
                   : 'text-gray-500 hover:text-gray-700'
-              }`}
+                }`}
             >
               Specific Node
               {deploymentTab === 'nodes' && (
@@ -608,11 +613,10 @@ const AdminServersPage = () => {
             <button
               type="button"
               onClick={() => setDeploymentTab('regions')}
-              className={`pb-2 ml-6 text-xs font-medium relative ${
-                deploymentTab === 'regions'
+              className={`pb-2 ml-6 text-xs font-medium relative ${deploymentTab === 'regions'
                   ? 'text-gray-800 border-indigo-600'
                   : 'text-gray-500 hover:text-gray-700'
-              }`}
+                }`}
             >
               Region (Load Balanced)
               {deploymentTab === 'regions' && (
@@ -621,7 +625,7 @@ const AdminServersPage = () => {
             </button>
           </div>
         </div>
-  
+
         {deploymentTab === 'nodes' ? (
           // Node selection section
           <>
@@ -631,7 +635,7 @@ const AdminServersPage = () => {
               </label>
               <select
                 value={createFormData.nodeId || ''}
-                onChange={(e) => updateFormData({ 
+                onChange={(e) => updateFormData({
                   nodeId: e.target.value,
                   // Clear regionId when selecting a node
                   regionId: '',
@@ -643,8 +647,8 @@ const AdminServersPage = () => {
               >
                 <option value="">Select a node</option>
                 {nodes.map(node => (
-                  <option 
-                    key={node.id} 
+                  <option
+                    key={node.id}
                     value={node.id}
                     disabled={!node.isOnline}
                   >
@@ -653,7 +657,7 @@ const AdminServersPage = () => {
                 ))}
               </select>
             </div>
-  
+
             {createFormData.nodeId && (
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-gray-700">
@@ -701,7 +705,7 @@ const AdminServersPage = () => {
               <>
                 <select
                   value={createFormData.regionId || ''}
-                  onChange={(e) => updateFormData({ 
+                  onChange={(e) => updateFormData({
                     regionId: e.target.value,
                     // Clear nodeId and allocationId when selecting a region
                     nodeId: '',
@@ -712,13 +716,13 @@ const AdminServersPage = () => {
                 >
                   <option value="">Select a region</option>
                   {availableRegions.map(region => (
-                    <option 
-                      key={region.id} 
+                    <option
+                      key={region.id}
                       value={region.id}
                       disabled={region.stats?.onlineNodeCount === 0 || region.stats?.atCapacity}
                     >
-                      {region.name} 
-                      {region.stats?.onlineNodeCount === 0 ? ' (No online nodes)' : ''} 
+                      {region.name}
+                      {region.stats?.onlineNodeCount === 0 ? ' (No online nodes)' : ''}
                       {region.stats?.atCapacity ? ' (At capacity)' : ''}
                     </option>
                   ))}
@@ -735,7 +739,7 @@ const AdminServersPage = () => {
             )}
           </div>
         )}
-  
+
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-700">
             Unit
@@ -749,10 +753,10 @@ const AdminServersPage = () => {
           />
           <select
             value={createFormData.unitId}
-            onChange={(e) => updateFormData({ 
+            onChange={(e) => updateFormData({
               unitId: e.target.value,
               // Clear Docker image when changing unit
-              dockerImage: '' 
+              dockerImage: ''
             })}
             className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
             required
@@ -765,7 +769,7 @@ const AdminServersPage = () => {
             ))}
           </select>
         </div>
-        
+
         {/* V3: Docker Image Selection - only show if unit is selected and is v3 */}
         {createFormData.unitId && selectedUnitDockerImages.length > 1 && isUnitV3 && (
           <div className="space-y-1">
@@ -790,7 +794,7 @@ const AdminServersPage = () => {
             </p>
           </div>
         )}
-        
+
         {/* V3: Custom startup command */}
         {createFormData.unitId && isUnitV3 && (
           <div className="space-y-1">
@@ -809,7 +813,7 @@ const AdminServersPage = () => {
             </p>
           </div>
         )}
-  
+
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-700">
             User
@@ -835,7 +839,7 @@ const AdminServersPage = () => {
             ))}
           </select>
         </div>
-  
+
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1">
             <label className="block text-xs font-medium text-gray-700">
@@ -850,7 +854,7 @@ const AdminServersPage = () => {
               required
             />
           </div>
-  
+
           <div className="space-y-1">
             <label className="block text-xs font-medium text-gray-700">
               Disk (MiB)
@@ -864,7 +868,7 @@ const AdminServersPage = () => {
               required
             />
           </div>
-  
+
           <div className="space-y-1">
             <label className="block text-xs font-medium text-gray-700">
               CPU (%)
@@ -880,13 +884,13 @@ const AdminServersPage = () => {
             />
           </div>
         </div>
-  
+
         <div className="flex items-center space-x-3">
           <button
             type="submit"
             className="px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800"
-            disabled={(deploymentTab === 'nodes' && (!createFormData.nodeId || !createFormData.allocationId)) || 
-                    (deploymentTab === 'regions' && !createFormData.regionId)}
+            disabled={(deploymentTab === 'nodes' && (!createFormData.nodeId || !createFormData.allocationId)) ||
+              (deploymentTab === 'regions' && !createFormData.regionId)}
           >
             Create Server
           </button>
@@ -918,7 +922,7 @@ const AdminServersPage = () => {
 
   const renderEditForm = () => {
     if (!selectedServer) return null;
-    
+
     return (
       <form onSubmit={handleEdit} className="space-y-4 max-w-lg">
         {formError && (
@@ -926,7 +930,7 @@ const AdminServersPage = () => {
             <p className="text-xs text-red-600">{formError}</p>
           </div>
         )}
-        
+
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-700">
             Name
@@ -954,8 +958,8 @@ const AdminServersPage = () => {
           />
           <select
             value={editFormData.unitId}
-            onChange={(e) => setEditFormData({ 
-              ...editFormData, 
+            onChange={(e) => setEditFormData({
+              ...editFormData,
               unitId: e.target.value,
               // Clear Docker image when changing unit
               dockerImage: ''
@@ -969,7 +973,7 @@ const AdminServersPage = () => {
               </option>
             ))}
           </select>
-          
+
           {editFormData.unitId !== selectedServer.unitId && (
             <p className="mt-2 text-yellow-600 text-xs">
               Warning: Changing the unit will reinstall the server with the new image.
@@ -977,7 +981,7 @@ const AdminServersPage = () => {
             </p>
           )}
         </div>
-        
+
         {/* V3: Docker Image Selection */}
         {isEditUnitV3 && editUnitDockerImages.length > 1 && (
           <div className="space-y-1">
@@ -1001,7 +1005,7 @@ const AdminServersPage = () => {
             </p>
           </div>
         )}
-        
+
         {/* V3: Custom Startup Command */}
         {isEditUnitV3 && (
           <div className="space-y-1">
@@ -1115,28 +1119,28 @@ const AdminServersPage = () => {
             </div>
           </div>
           <div className="flex items-center space-x-3">
-   <button
-      onClick={() => {
-        // Initialize the edit form with current server values
-        setEditFormData({
-          name: selectedServer.name,
-          unitId: selectedServer.unitId,
-          memoryMiB: selectedServer.memoryMiB,
-          diskMiB: selectedServer.diskMiB,
-          cpuPercent: selectedServer.cpuPercent,
-          // V3: Add existing Docker image if available
-          dockerImage: selectedServer.status?.image || '',
-          // V3: Add existing startup command if available
-          startupCommand: selectedServer.status?.startup_command || ''
-        });
-        setFormError(null);
-        setView('edit');
-      }}
-      className="flex items-center px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
-    >
-      <PencilIcon className="w-3.5 h-3.5 mr-1.5" />
-      Edit
-    </button>
+            <button
+              onClick={() => {
+                // Initialize the edit form with current server values
+                setEditFormData({
+                  name: selectedServer.name,
+                  unitId: selectedServer.unitId,
+                  memoryMiB: selectedServer.memoryMiB,
+                  diskMiB: selectedServer.diskMiB,
+                  cpuPercent: selectedServer.cpuPercent,
+                  // V3: Add existing Docker image if available
+                  dockerImage: selectedServer.status?.image || '',
+                  // V3: Add existing startup command if available
+                  startupCommand: selectedServer.status?.startup_command || ''
+                });
+                setFormError(null);
+                setView('edit');
+              }}
+              className="flex items-center px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+            >
+              <PencilIcon className="w-3.5 h-3.5 mr-1.5" />
+              Edit
+            </button>
             <button
               onClick={() => handleDelete(selectedServer.id)}
               className="flex items-center px-3 py-2 text-xs font-medium text-red-600 bg-white border border-gray-200 rounded-md hover:bg-red-50"
@@ -1165,13 +1169,12 @@ const AdminServersPage = () => {
               <div>
                 <div className="text-xs text-gray-500">Current State</div>
                 <div className="text-sm mt-1">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    selectedServer.state === 'running' ? 'bg-green-100 text-green-800' : 
-                    selectedServer.state === 'updating' ? 'bg-yellow-100 text-yellow-800' :
-                    selectedServer.state === 'stopping' ? 'bg-orange-100 text-orange-800' :
-                    selectedServer.state === 'starting' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${selectedServer.state === 'running' ? 'bg-green-100 text-green-800' :
+                      selectedServer.state === 'updating' ? 'bg-yellow-100 text-yellow-800' :
+                        selectedServer.state === 'stopping' ? 'bg-orange-100 text-orange-800' :
+                          selectedServer.state === 'starting' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                    }`}>
                     {selectedServer.state}
                   </span>
                 </div>
@@ -1310,13 +1313,12 @@ const AdminServersPage = () => {
                     <div className="px-6 h-20 flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="flex-shrink-0">
-                          <div 
-                            className={`h-2 w-2 rounded-full ${
-                              server.state === 'running' ? 'bg-green-400' : 
-                              server.state === 'updating' ? 'bg-yellow-400' :
-                              server.state === 'starting' ? 'bg-blue-400' :
-                              'bg-gray-300'
-                            }`}
+                          <div
+                            className={`h-2 w-2 rounded-full ${server.state === 'running' ? 'bg-green-400' :
+                                server.state === 'updating' ? 'bg-yellow-400' :
+                                  server.state === 'starting' ? 'bg-blue-400' :
+                                    'bg-gray-300'
+                              }`}
                           />
                         </div>
                         <div>
@@ -1395,7 +1397,7 @@ const AdminServersPage = () => {
               {renderEditForm()}
             </div>
           )}
-          
+
           {view === 'view' && renderServerView()}
         </div>
       </div>

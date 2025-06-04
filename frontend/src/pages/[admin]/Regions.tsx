@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  PlusIcon, 
-  TrashIcon, 
-  PencilIcon, 
-  ArrowLeftIcon, 
-  ChevronDownIcon, 
-  AlertTriangleIcon,
-  GlobeIcon
-} from 'lucide-react';
+import {
+  PlusIcon,
+  TrashIcon,
+  PencilIcon,
+  ArrowLeftIcon,
+  ChevronDownIcon,
+  ExclamationTriangleIcon,
+  GlobeAltIcon as GlobeIcon
+} from '@heroicons/react/24/outline';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 interface Region {
@@ -67,12 +67,12 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
   const bgColor = type === 'error' ? 'bg-red-50' : type === 'success' ? 'bg-green-50' : 'bg-yellow-50';
   const textColor = type === 'error' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-yellow-600';
   const borderColor = type === 'error' ? 'border-red-100' : type === 'success' ? 'border-green-100' : 'border-yellow-100';
-  
+
   return (
     <div className={`${bgColor} border ${borderColor} rounded-md flex items-start justify-between`}>
       <div className="flex items-start p-2">
         {type === 'error' || type === 'warning' ? (
-          <AlertTriangleIcon className={`w-3 h-3 ${textColor} mr-2 mt-0.5`} />
+          <ExclamationTriangleIcon className={`w-3 h-3 ${textColor} mr-2 mt-0.5`} />
         ) : null}
         <p className={`text-xs ${textColor}`}>{message}</p>
       </div>
@@ -128,7 +128,7 @@ const AdminRegionsPage = () => {
   const [tableSortDirection, setTableSortDirection] = useState<'asc' | 'desc'>('asc');
   const [assigning, setAssigning] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string>('');
-  
+
   console.log(error)
   useEffect(() => {
     fetchData();
@@ -138,12 +138,12 @@ const AdminRegionsPage = () => {
   const showAlert = useCallback((type: 'error' | 'success' | 'warning', message: string) => {
     const id = Date.now().toString();
     setAlerts(prev => [...prev, { id, type, message }]);
-    
+
     // Auto-dismiss after 5 seconds
     setTimeout(() => {
       setAlerts(prev => prev.filter(alert => alert.id !== id));
     }, 5000);
-    
+
     return id;
   }, []);
 
@@ -157,22 +157,22 @@ const AdminRegionsPage = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       const headers = { 'Authorization': `Bearer ${token}` };
-      
+
       const [regionsRes, nodesRes] = await Promise.all([
         fetch('/api/regions', { headers }),
         fetch('/api/nodes', { headers })
       ]);
-      
+
       if (!regionsRes.ok) {
         const errorData = await regionsRes.json();
         throw new Error(errorData.error || 'Failed to fetch regions');
       }
-      
+
       if (!nodesRes.ok) {
         const errorData = await nodesRes.json();
         throw new Error(errorData.error || 'Failed to fetch nodes');
       }
-      
+
       const [regionsData, nodesData] = await Promise.all([
         regionsRes.json(),
         nodesRes.json()
@@ -181,7 +181,7 @@ const AdminRegionsPage = () => {
       // Get unassigned nodes
       const unassigned = nodesData.filter((node: Node) => !node.regionId);
       setUnassignedNodes(unassigned);
-      
+
       setRegions(regionsData);
 
       // Refresh selected region data if we're in view mode
@@ -209,24 +209,24 @@ const AdminRegionsPage = () => {
       const response = await fetch(`/api/regions/${regionId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to fetch region');
       }
-      
+
       const regionData = await response.json();
-      
+
       // Update the region in the regions list
-      setRegions(prevRegions => 
+      setRegions(prevRegions =>
         prevRegions.map(region => region.id === regionId ? regionData : region)
       );
-      
+
       // Update selected region if this is the one we're viewing
       if (selectedRegion && selectedRegion.id === regionId) {
         setSelectedRegion(regionData);
       }
-      
+
       setError(null);
       return regionData;
     } catch (err) {
@@ -241,7 +241,7 @@ const AdminRegionsPage = () => {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    
+
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/regions', {
@@ -254,12 +254,12 @@ const AdminRegionsPage = () => {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
-        const errorMessage = Array.isArray(data.error) 
+        const errorMessage = Array.isArray(data.error)
           ? data.error.map((e: any) => e.message).join(', ')
           : data.error || 'Failed to create region';
-        
+
         throw new Error(errorMessage);
       }
 
@@ -293,22 +293,22 @@ const AdminRegionsPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        const errorMessage = Array.isArray(data.error) 
+        const errorMessage = Array.isArray(data.error)
           ? data.error.map((e: any) => e.message).join(', ')
           : data.error || 'Failed to update region';
-        
+
         throw new Error(errorMessage);
       }
 
       await fetchData();
       showAlert('success', `Region "${formData.name}" updated successfully`);
-      
+
       // Fetch the updated region and update selected region
       const updatedRegion = await fetchSingleRegion(selectedRegion.id);
       if (updatedRegion) {
         setSelectedRegion(updatedRegion);
       }
-      
+
       setView('view');
       setFormData({ name: '', identifier: '' });
     } catch (err) {
@@ -338,7 +338,7 @@ const AdminRegionsPage = () => {
         setView('list');
         setSelectedRegion(null);
       }
-      
+
       showAlert('success', 'Region deleted successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete region';
@@ -348,7 +348,7 @@ const AdminRegionsPage = () => {
 
   const handleAssignNode = async () => {
     if (!selectedRegion || !selectedNodeId) return;
-    
+
     try {
       setAssigning(true);
       const token = localStorage.getItem('token');
@@ -368,13 +368,13 @@ const AdminRegionsPage = () => {
 
       // Refresh data
       await fetchData();
-      
+
       // Refresh region data
       const updatedRegion = await fetchSingleRegion(selectedRegion.id);
       if (updatedRegion) {
         setSelectedRegion(updatedRegion);
       }
-      
+
       setSelectedNodeId('');
       showAlert('success', 'Node assigned to region successfully');
     } catch (err) {
@@ -404,7 +404,7 @@ const AdminRegionsPage = () => {
 
       // Refresh data
       await fetchData();
-      
+
       // Refresh region data if we're viewing a region
       if (selectedRegion) {
         const updatedRegion = await fetchSingleRegion(selectedRegion.id);
@@ -412,7 +412,7 @@ const AdminRegionsPage = () => {
           setSelectedRegion(updatedRegion);
         }
       }
-      
+
       showAlert('success', 'Node unassigned from region successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to unassign node';
@@ -432,7 +432,7 @@ const AdminRegionsPage = () => {
   const getSortedRegions = () => {
     return [...regions].sort((a, b) => {
       let comparison = 0;
-      
+
       switch (tableSortField) {
         case 'name':
           comparison = a.name.localeCompare(b.name);
@@ -456,7 +456,7 @@ const AdminRegionsPage = () => {
         default:
           comparison = 0;
       }
-      
+
       return tableSortDirection === 'asc' ? comparison : -comparison;
     });
   };
@@ -470,7 +470,7 @@ const AdminRegionsPage = () => {
           onDismiss={() => setFormError(null)}
         />
       )}
-      
+
       <div className="space-y-1">
         <label className="block text-xs font-medium text-gray-700">
           Name
@@ -555,9 +555,9 @@ const AdminRegionsPage = () => {
         <input
           type="number"
           value={formData.serverLimit || ''}
-          onChange={(e) => setFormData({ 
-            ...formData, 
-            serverLimit: e.target.value ? parseInt(e.target.value) : undefined 
+          onChange={(e) => setFormData({
+            ...formData,
+            serverLimit: e.target.value ? parseInt(e.target.value) : undefined
           })}
           className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
           min={0}
@@ -644,31 +644,28 @@ const AdminRegionsPage = () => {
         <div className="flex space-x-4 border-b border-gray-200">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`py-2 px-1 text-xs font-medium border-b-2 ${
-              activeTab === 'overview'
+            className={`py-2 px-1 text-xs font-medium border-b-2 ${activeTab === 'overview'
                 ? 'border-gray-900 text-gray-900'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             Overview
           </button>
           <button
             onClick={() => setActiveTab('nodes')}
-            className={`py-2 px-1 text-xs font-medium border-b-2 ${
-              activeTab === 'nodes'
+            className={`py-2 px-1 text-xs font-medium border-b-2 ${activeTab === 'nodes'
                 ? 'border-gray-900 text-gray-900'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             Nodes ({selectedRegion.nodes.length})
           </button>
           <button
             onClick={() => setActiveTab('servers')}
-            className={`py-2 px-1 text-xs font-medium border-b-2 ${
-              activeTab === 'servers'
+            className={`py-2 px-1 text-xs font-medium border-b-2 ${activeTab === 'servers'
                 ? 'border-gray-900 text-gray-900'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+              }`}
           >
             Servers ({serverCount})
           </button>
@@ -779,7 +776,7 @@ const AdminRegionsPage = () => {
                         </div>
                       ))
                     ) : (
-                        <div className="py-6 text-center">
+                      <div className="py-6 text-center">
                         <p className="text-sm text-gray-500">No nodes in this region</p>
                       </div>
                     )}
@@ -849,7 +846,7 @@ const AdminRegionsPage = () => {
                   <p className="text-xs text-gray-500">
                     There are {serverCount} servers running across {selectedRegion.nodes.length} nodes in this region.
                   </p>
-                  
+
                   {/* This would be a table or list of servers if we had the data */}
                   <div className="py-4 text-center">
                     <p className="text-sm text-gray-500">
@@ -871,7 +868,7 @@ const AdminRegionsPage = () => {
 
   const renderRegionTable = () => {
     const sortedRegions = getSortedRegions();
-    
+
     return (
       <div className="overflow-x-auto rounded-lg">
         <table className="min-w-full border-collapse">
@@ -926,8 +923,8 @@ const AdminRegionsPage = () => {
             {sortedRegions.map((region) => {
               const countryName = countryOptions.find(option => option.value === region.countryId)?.label || region.countryId || '-';
               return (
-                <tr 
-                  key={region.id} 
+                <tr
+                  key={region.id}
                   className="hover:bg-gray-50 cursor-pointer"
                   onClick={() => {
                     setSelectedRegion(region);

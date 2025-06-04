@@ -1,7 +1,14 @@
 import { Link } from 'react-router-dom';
-import { ChevronRightIcon, FolderIcon, XIcon, AlertTriangleIcon, CheckIcon, MoreHorizontalIcon } from 'lucide-react';
 import { CubeTransparentIcon } from '@heroicons/react/24/solid';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowPathIcon,
+  ChevronRightIcon,
+  FolderIcon,
+  XMarkIcon,
+  ExclamationTriangleIcon,
+  CheckIcon,
+  EllipsisHorizontalIcon
+} from '@heroicons/react/24/outline';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useProjects } from '../contexts/ProjectContext';
@@ -130,7 +137,7 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
     <div className={`${bgColor} border ${borderColor} rounded-md flex items-start justify-between mb-4`}>
       <div className="flex items-start p-3">
         {type === 'error' || type === 'warning' ? (
-          <AlertTriangleIcon className={`w-4 h-4 ${textColor} mr-2 mt-0.5`} />
+          <ExclamationTriangleIcon className={`w-4 h-4 ${textColor} mr-2 mt-0.5`} />
         ) : (
           <CheckIcon className={`w-4 h-4 ${textColor} mr-2 mt-0.5`} />
         )}
@@ -141,7 +148,7 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
           onClick={onDismiss}
           className={`p-4 ${textColor} hover:bg-opacity-10 cursor-pointer rounded-full`}
         >
-          <XIcon className="w-4 h-4" />
+          <XMarkIcon className="w-4 h-4" />
         </button>
       )}
     </div>
@@ -652,7 +659,7 @@ export default function Home() {
                                 content="Node connection issue. Server may be inaccessible."
                                 position="top"
                               >
-                                <AlertTriangleIcon className="ml-2 h-3.5 w-3.5 text-amber-500" />
+                                <ExclamationTriangleIcon className="ml-2 h-3.5 w-3.5 text-amber-500" />
                               </Tooltip>
                             )}
                             <div className="text-[11px] text-gray-500 ml-1">
@@ -685,7 +692,7 @@ export default function Home() {
                             className="h-full px-3 border-l border-gray-200 text-gray-400 cursor-pointer hover:text-gray-600 hover:bg-gray-50 transition-colors duration-150 flex items-center"
                             aria-label="Server options"
                           >
-                            <MoreHorizontalIcon className="w-4 h-4" />
+                            <EllipsisHorizontalIcon className="w-4 h-4" />
                           </button>
                         </div>
                       )}

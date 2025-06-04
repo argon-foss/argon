@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { FolderIcon, PlusIcon, PencilIcon, TrashIcon, AlertTriangleIcon, XIcon, CheckIcon, RefreshCwIcon } from 'lucide-react';
+import {
+  FolderIcon,
+  PlusIcon,
+  PencilSquareIcon,
+  TrashIcon,
+  ExclamationTriangleIcon,
+  XMarkIcon,
+  CheckIcon,
+  ArrowPathIcon
+} from '@heroicons/react/24/outline';
 import { useProjects } from '../contexts/ProjectContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -76,7 +85,7 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
     <div className={`${bgColor} border ${borderColor} rounded-md flex items-start justify-between mb-4`}>
       <div className="flex items-start p-3">
         {type === 'error' || type === 'warning' ? (
-          <AlertTriangleIcon className={`w-4 h-4 ${textColor} mr-2 mt-0.5`} />
+          <ExclamationTriangleIcon className={`w-4 h-4 ${textColor} mr-2 mt-0.5`} />
         ) : (
           <CheckIcon className={`w-4 h-4 ${textColor} mr-2 mt-0.5`} />
         )}
@@ -87,7 +96,7 @@ const Alert: React.FC<AlertProps> = ({ type, message, onDismiss }) => {
           onClick={onDismiss}
           className={`p-2 ${textColor} hover:bg-opacity-10 cursor-pointer rounded-full`}
         >
-          <XIcon className="w-4 h-4" />
+          <XMarkIcon className="w-4 h-4" />
         </button>
       )}
     </div>
@@ -346,7 +355,7 @@ const ProjectsPage: React.FC = () => {
               onClick={fetchProjects}
               className="flex items-center px-4 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors duration-150"
             >
-              <RefreshCwIcon className="h-4 w-4 mr-2" />
+              <ArrowPathIcon className="h-4 w-4 mr-2" />
               Refresh
             </button>
             <button
@@ -425,7 +434,7 @@ const ProjectsPage: React.FC = () => {
                           className="p-1.5 text-gray-400 hover:text-gray-800 rounded-full hover:bg-gray-100 transition-colors duration-150"
                           title="Edit project"
                         >
-                          <PencilIcon className="h-4 w-4" />
+                          <PencilSquareIcon className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => {

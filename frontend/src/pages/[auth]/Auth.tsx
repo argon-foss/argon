@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import {
+  EyeIcon,
+  EyeSlashIcon
+} from '@heroicons/react/24/outline';
 
 interface User {
   username: string;
@@ -16,85 +19,85 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
-    const navigate = useNavigate();
-  
-    useEffect(() => {
-      checkAuthState();
-    }, []);
-  
-    const checkAuthState = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setLoading(false);
-          return;
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    checkAuthState();
+  }, []);
+
+  const checkAuthState = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch('/api/auth/state', {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-  
-        const response = await fetch('/api/auth/state', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-  
-        if (response.ok) {
-          const data = await response.json();
-          setUser({ username: data.username, permissions: data.permissions });
-        } else {
-          localStorage.removeItem('token');
-        }
-      } catch (error) {
-        console.error('Auth state check failed:', error);
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser({ username: data.username, permissions: data.permissions });
+      } else {
         localStorage.removeItem('token');
       }
-      setLoading(false);
-    };
-  
-    const login = async (username: string, password: string) => {
-      try {
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-  
-        const data = await response.json();
-        
-        if (!response.ok) throw new Error(data.error);
-        
-        localStorage.setItem('token', data.token);
-
-        // Call /api/state
-        const stateResponse = await fetch('/api/auth/state', {
-          headers: {
-            'Authorization': `Bearer ${data.token}`
-          }
-        });
-        if (!stateResponse.ok) throw new Error('Failed to fetch user state');
-
-        const stateData = await stateResponse.json();
-        setUser({ username, permissions: stateData.permissions });
-        window.location.href = '/servers';
-        return { success: true };
-      } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : 'An error occurred' };
-      }
-    };
-  
-    const logout = () => {
+    } catch (error) {
+      console.error('Auth state check failed:', error);
       localStorage.removeItem('token');
-      setUser(null);
-      navigate('/login');
-    };
-  
-    if (loading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        </div>
-      );
     }
+    setLoading(false);
+  };
+
+  const login = async (username: string, password: string) => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error);
+
+      localStorage.setItem('token', data.token);
+
+      // Call /api/state
+      const stateResponse = await fetch('/api/auth/state', {
+        headers: {
+          'Authorization': `Bearer ${data.token}`
+        }
+      });
+      if (!stateResponse.ok) throw new Error('Failed to fetch user state');
+
+      const stateData = await stateResponse.json();
+      setUser({ username, permissions: stateData.permissions });
+      window.location.href = '/servers';
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'An error occurred' };
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+    navigate('/login');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
@@ -165,7 +168,7 @@ export const AuthPage: React.FC = () => {
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-white">{systemName}</h1>
         </div>
-        
+
         <div className="my-6">
           <h2 className="text-2xl font-semibold text-white">
             Welcome back!
@@ -174,10 +177,10 @@ export const AuthPage: React.FC = () => {
             We are glad to see you again.
           </p>
         </div>
-        
+
         <div className="mt-8">
-          <Link 
-            to="https://github.com/argon-foss" 
+          <Link
+            to="https://github.com/argon-foss"
             className="inline-flex items-center text-gray-500 hover:text-gray-300 border-b border-gray-500 pb-1"
           >
             Powered by {systemName}
@@ -187,7 +190,7 @@ export const AuthPage: React.FC = () => {
           </Link>
         </div>
       </div>
-      
+
       {/* Right panel */}
       <div className="w-3/5 flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-xs p-8 w-full max-w-md border border-gray-200/50">
@@ -197,14 +200,14 @@ export const AuthPage: React.FC = () => {
           <p className="text-gray-600 text-sm mb-6">
             Enter your credentials to access your account.
           </p>
-          
+
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
               <div className="px-3 py-2 rounded-md bg-red-50 border border-red-100">
                 <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
-            
+
             <div>
               <label htmlFor="username" className="block text-xs font-medium text-gray-700 mb-1.5">
                 Username
@@ -222,7 +225,7 @@ export const AuthPage: React.FC = () => {
                 required
               />
             </div>
-            
+
             <div>
               <label htmlFor="password" className="block text-xs font-medium text-gray-700 mb-1.5">
                 Password
@@ -243,17 +246,17 @@ export const AuthPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
                   {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
+                    <EyeSlashIcon className="h-4 w-4 text-gray-400" />
                   ) : (
-                    <Eye className="w-4 h-4" />
+                    <EyeIcon className="h-4 w-4 text-gray-400" />
                   )}
                 </button>
               </div>
             </div>
-            
+
             <button
               type="submit"
               disabled={isLoading}
@@ -271,7 +274,7 @@ export const AuthPage: React.FC = () => {
               )}
             </button>
           </form>
-          
+
           <div className="mt-6 text-center">
             <p className="text-xs text-gray-500">
               Forgot password
