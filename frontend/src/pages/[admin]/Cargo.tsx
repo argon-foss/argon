@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronRightIcon, TrashIcon, PencilIcon, ArrowLeftIcon, PlusIcon, FolderIcon, FileIcon, LinkIcon } from 'lucide-react';
 import { z } from 'zod';
 import AdminBar from '../../components/AdminBar';
@@ -40,7 +40,15 @@ const cargoContainerSchema = z.object({
 
 type Cargo = z.infer<typeof cargoSchema>;
 type CargoContainer = z.infer<typeof cargoContainerSchema>;
-type View = 'cargo-list' | 'cargo-create' | 'cargo-view' | 'cargo-edit' | 'container-list' | 'container-create' | 'container-view' | 'container-edit';
+type View =
+  | 'cargo-list'
+  | 'cargo-create'
+  | 'cargo-view'
+  | 'cargo-edit'
+  | 'container-list'
+  | 'container-create'
+  | 'container-view'
+  | 'container-edit';
 
 // File size formatter
 const formatFileSize = (bytes: number): string => {
@@ -63,7 +71,7 @@ const PropertiesForm: React.FC<{
 
   const handleAddCustomProperty = () => {
     if (!customKey.trim()) return;
-    
+
     onChange({
       ...properties,
       customProperties: {
@@ -71,21 +79,21 @@ const PropertiesForm: React.FC<{
         [customKey]: customValue
       }
     });
-    
+
     setCustomKey('');
     setCustomValue('');
   };
 
   const handleRemoveCustomProperty = (key: string) => {
     if (!properties.customProperties) return;
-    
+
     const newCustomProperties = { ...properties.customProperties };
     delete newCustomProperties[key];
-    
+
     onChange({
       ...properties,
-      customProperties: Object.keys(newCustomProperties).length > 0 
-        ? newCustomProperties 
+      customProperties: Object.keys(newCustomProperties).length > 0
+        ? newCustomProperties
         : undefined
     });
   };
@@ -93,39 +101,42 @@ const PropertiesForm: React.FC<{
   return (
     <div className="space-y-4">
       <div className="text-xs font-medium text-gray-700">Properties</div>
-      
+
       <div className="space-y-2">
         <label className="flex items-center space-x-2">
           <input
             type="checkbox"
             checked={properties.hidden || false}
             onChange={(e) => onChange({ ...properties, hidden: e.target.checked })}
+            className="rounded border-gray-200 text-gray-900 focus:ring-gray-500"
           />
           <span className="text-xs">Hidden (not visible to users)</span>
         </label>
-        
+
         <label className="flex items-center space-x-2">
           <input
             type="checkbox"
             checked={properties.readonly || false}
             onChange={(e) => onChange({ ...properties, readonly: e.target.checked })}
+            className="rounded border-gray-200 text-gray-900 focus:ring-gray-500"
           />
           <span className="text-xs">Read-only (users cannot modify)</span>
         </label>
-        
+
         <label className="flex items-center space-x-2">
           <input
             type="checkbox"
             checked={properties.noDelete || false}
             onChange={(e) => onChange({ ...properties, noDelete: e.target.checked })}
+            className="rounded border-gray-200 text-gray-900 focus:ring-gray-500"
           />
           <span className="text-xs">No Delete (users cannot delete)</span>
         </label>
       </div>
-      
+
       <div className="pt-2">
         <div className="text-xs font-medium text-gray-700 mb-2">Custom Properties</div>
-        
+
         <div className="space-y-2">
           {properties.customProperties && Object.entries(properties.customProperties).map(([key, value]) => (
             <div key={key} className="flex items-center space-x-2">
@@ -141,7 +152,7 @@ const PropertiesForm: React.FC<{
               </button>
             </div>
           ))}
-          
+
           <div className="flex items-center space-x-2">
             <input
               type="text"
@@ -196,9 +207,9 @@ const ContainerItemsForm: React.FC<{
       const response = await fetch('/api/cargo', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) throw new Error('Failed to fetch cargo');
-      
+
       const data = await response.json();
       setAllCargo(data);
     } catch (err) {
@@ -210,9 +221,9 @@ const ContainerItemsForm: React.FC<{
 
   const handleAddItem = () => {
     if (!selectedCargoId || !targetPath.trim()) return;
-    
+
     onChange([...items, { cargoId: selectedCargoId, targetPath }]);
-    
+
     setSelectedCargoId('');
     setTargetPath('');
     setShowSelector(false);
@@ -234,16 +245,16 @@ const ContainerItemsForm: React.FC<{
         <button
           type="button"
           onClick={() => setShowSelector(!showSelector)}
-          className="px-2 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 flex items-center"
+          className="px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 flex items-center"
         >
-          <PlusIcon className="w-3 h-3 mr-1" />
+          <PlusIcon className="w-3.5 h-3.5 mr-1.5" />
           Add Item
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-600 p-2 rounded-md text-xs">
-          {error}
+        <div className="bg-red-50 border border-red-100 rounded-md p-3">
+          <p className="text-xs text-red-600">{error}</p>
         </div>
       )}
 
@@ -251,7 +262,7 @@ const ContainerItemsForm: React.FC<{
       {showSelector && (
         <div className="border border-gray-200 rounded-md p-3 space-y-3">
           <h4 className="text-xs font-medium mb-2">Add cargo to container</h4>
-          
+
           <div className="space-y-2">
             <div className="text-xs text-gray-500">Select Cargo</div>
             {loading ? (
@@ -262,7 +273,7 @@ const ContainerItemsForm: React.FC<{
               <select
                 value={selectedCargoId}
                 onChange={(e) => setSelectedCargoId(e.target.value)}
-                className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+                className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
               >
                 <option value="">-- Select cargo --</option>
                 {availableCargo.map(cargo => (
@@ -273,33 +284,33 @@ const ContainerItemsForm: React.FC<{
               </select>
             )}
           </div>
-          
+
           <div className="space-y-2">
             <div className="text-xs text-gray-500">Target Path</div>
             <input
               type="text"
               value={targetPath}
               onChange={(e) => setTargetPath(e.target.value)}
-              className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
-              placeholder="/path/to/destination"
+              className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
+              placeholder="/path/to/file"
             />
           </div>
-          
-          <div className="flex justify-end space-x-2 pt-2">
+
+          <div className="flex justify-end space-x-2">
             <button
               type="button"
               onClick={() => setShowSelector(false)}
-              className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded"
+              className="px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleAddItem}
-              disabled={!selectedCargoId || !targetPath.trim()}
-              className="px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!selectedCargoId || !targetPath}
+              className="px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Add to Container
+              Add Item
             </button>
           </div>
         </div>
@@ -311,9 +322,9 @@ const ContainerItemsForm: React.FC<{
           <div className="space-y-2">
             {items.map((item, index) => {
               const cargoItem = allCargo.find(c => c.id === item.cargoId) || { name: 'Loading...', type: 'local' };
-              
+
               return (
-                <div 
+                <div
                   key={index}
                   className="flex justify-between items-center border border-gray-200 rounded-md p-3"
                 >
@@ -359,7 +370,7 @@ const AdminCargoPage: React.FC = () => {
   const [view, setView] = useState<View>('cargo-list');
   const [selectedCargo, setSelectedCargo] = useState<Cargo | null>(null);
   const [selectedContainer, setSelectedContainer] = useState<CargoContainer | null>(null);
-  
+
   // Form data states
   const [cargoFormData, setCargoFormData] = useState<Omit<Cargo, 'id' | 'createdAt' | 'updatedAt'>>({
     name: '',
@@ -370,16 +381,121 @@ const AdminCargoPage: React.FC = () => {
     size: 0,
     mimeType: ''
   });
-  
+
   const [containerFormData, setContainerFormData] = useState<Omit<CargoContainer, 'id' | 'createdAt' | 'updatedAt'>>({
     name: '',
     description: '',
     items: []
   });
-  
+
   const [fileUpload, setFileUpload] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  // State for tab indicator animation
+  const [indicatorStyle, setIndicatorStyle] = useState({
+    width: 0,
+    height: 0,
+    top: 0,
+    left: 0,
+    opacity: 0,
+  });
+
+  // Refs for tab buttons
+  const tabRefsMap = useRef<Record<string, HTMLButtonElement | null>>({});
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+
+  // Set ref for tab button
+  const setTabRef = useCallback((id: string, element: HTMLButtonElement | null) => {
+    tabRefsMap.current[id] = element;
+  }, []);
+
+  // Update indicator position when view changes
+  useEffect(() => {
+    const updateIndicator = () => {
+      const activeView = view.startsWith('cargo-') ? 'cargo' : 'container';
+      const tabElement = tabRefsMap.current[activeView];
+      if (!tabElement || !tabsContainerRef.current) return;
+
+      const rect = tabElement.getBoundingClientRect();
+      const containerRect = tabsContainerRef.current.getBoundingClientRect();
+
+      const offsetLeft = rect.left - containerRect.left;
+
+      setIndicatorStyle({
+        width: rect.width,
+        height: rect.height,
+        top: 3.5,
+        left: offsetLeft,
+        opacity: 1,
+      });
+    };
+
+    const animationFrame = requestAnimationFrame(updateIndicator);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [view]);
+
+  // Initialize the indicator position after component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const activeView = view.startsWith('cargo-') ? 'cargo' : 'container';
+      const tabElement = tabRefsMap.current[activeView];
+      if (!tabElement || !tabsContainerRef.current) return;
+
+      const rect = tabElement.getBoundingClientRect();
+      const containerRect = tabsContainerRef.current.getBoundingClientRect();
+
+      const offsetLeft = rect.left - containerRect.left;
+
+      setIndicatorStyle({
+        width: rect.width,
+        height: rect.height,
+        top: 3.5,
+        left: offsetLeft,
+        opacity: 1,
+      });
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // TabButton component with ref handling
+  const TabButton = useCallback(({
+    id,
+    isActive,
+    onClick,
+    children
+  }: {
+    id: string;
+    isActive: boolean;
+    onClick: () => void;
+    children: React.ReactNode;
+  }) => {
+    const buttonRef = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+      if (buttonRef.current) {
+        setTabRef(id, buttonRef.current);
+      }
+
+      return () => {
+        setTabRef(id, null);
+      };
+    }, [id]);
+
+    return (
+      <button
+        ref={buttonRef}
+        onClick={onClick}
+        className={`tab-button relative z-5 cursor-pointer px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 outline-none focus:outline-none focus:ring-0 ${isActive
+          ? 'text-gray-800 border-none'
+          : 'text-gray-500 border-none hover:text-gray-700 hover:bg-gray-50'
+          }`}
+      >
+        {children}
+      </button>
+    );
+  }, [setTabRef]);
 
   // Initial data fetch
   useEffect(() => {
@@ -406,9 +522,9 @@ const AdminCargoPage: React.FC = () => {
       const response = await fetch('/api/cargo', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) throw new Error('Failed to fetch cargo');
-      
+
       const data = await response.json();
       setCargoItems(data);
       return data;
@@ -425,7 +541,7 @@ const AdminCargoPage: React.FC = () => {
       const response = await fetch('/api/cargo/container', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           // If we get a 404, it might be that there are no containers yet
@@ -434,7 +550,7 @@ const AdminCargoPage: React.FC = () => {
         }
         throw new Error('Failed to fetch containers');
       }
-      
+
       const data = await response.json();
       setContainers(data);
       return data;
@@ -449,14 +565,14 @@ const AdminCargoPage: React.FC = () => {
   const handleCreateLocalCargo = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    
+
     try {
       if (!fileUpload) {
         throw new Error('Please select a file to upload');
       }
-      
+
       setIsUploading(true);
-      
+
       const formData = new FormData();
       formData.append('file', fileUpload);
       formData.append('data', JSON.stringify({
@@ -464,7 +580,7 @@ const AdminCargoPage: React.FC = () => {
         description: cargoFormData.description,
         properties: cargoFormData.properties
       }));
-      
+
       const token = localStorage.getItem('token');
       const response = await fetch('/api/cargo/upload', {
         method: 'POST',
@@ -492,12 +608,12 @@ const AdminCargoPage: React.FC = () => {
   const handleCreateRemoteCargo = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    
+
     try {
       if (!cargoFormData.remoteUrl) {
         throw new Error('Remote URL is required');
       }
-      
+
       const token = localStorage.getItem('token');
       const response = await fetch('/api/cargo/remote', {
         method: 'POST',
@@ -568,15 +684,15 @@ const AdminCargoPage: React.FC = () => {
   const handleDeleteCargo = async (cargoId: string) => {
     try {
       // Check if cargo is used in any containers
-      const usedInContainers = containers.filter(container => 
+      const usedInContainers = containers.filter(container =>
         container.items.some(item => item.cargoId === cargoId)
       );
-      
+
       if (usedInContainers.length > 0) {
         const containerNames = usedInContainers.map(c => c.name).join(', ');
         throw new Error(`Cargo is used in containers: ${containerNames}`);
       }
-      
+
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/cargo/${cargoId}`, {
         method: 'DELETE',
@@ -602,7 +718,7 @@ const AdminCargoPage: React.FC = () => {
   const handleCreateContainer = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    
+
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/cargo/container', {
@@ -711,12 +827,12 @@ const AdminCargoPage: React.FC = () => {
 
   // Render functions for cargo
   const renderCargoForm = (type: 'create' | 'edit') => (
-    <form 
+    <form
       onSubmit={
-        type === 'create' 
+        type === 'create'
           ? (cargoFormData.type === 'local' ? handleCreateLocalCargo : handleCreateRemoteCargo)
           : handleUpdateCargo
-      } 
+      }
       className="space-y-4 max-w-lg"
     >
       {formError && (
@@ -732,7 +848,7 @@ const AdminCargoPage: React.FC = () => {
           type="text"
           value={cargoFormData.name}
           onChange={(e) => setCargoFormData({ ...cargoFormData, name: e.target.value })}
-          className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+          className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
           placeholder="My Cargo Item"
           required
         />
@@ -743,7 +859,7 @@ const AdminCargoPage: React.FC = () => {
         <textarea
           value={cargoFormData.description}
           onChange={(e) => setCargoFormData({ ...cargoFormData, description: e.target.value })}
-          className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md"
+          className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
           placeholder="Description of this cargo item..."
           rows={3}
           required
@@ -821,13 +937,7 @@ const AdminCargoPage: React.FC = () => {
           disabled={isUploading}
           className="px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isUploading ? (
-            <>
-              Uploading...
-            </>
-          ) : (
-            type === 'create' ? 'Create Cargo' : 'Update Cargo'
-          )}
+          {isUploading ? 'Uploading...' : (type === 'create' ? 'Create Cargo' : 'Update Cargo')}
         </button>
         <button
           type="button"
@@ -856,8 +966,8 @@ const AdminCargoPage: React.FC = () => {
                 setSelectedCargo(null);
                 resetCargoForm();
               }
-            }
-            className="flex items-center text-gray-600 hover:bg-gray-100 p-2 cursor-pointer rounded-md transition hover:text-gray-900"
+              }
+              className="flex items-center text-gray-600 hover:bg-gray-100 p-2 cursor-pointer rounded-md transition hover:text-gray-900"
             >
               <ArrowLeftIcon className="w-4 h-4" />
             </button>
@@ -921,9 +1031,9 @@ const AdminCargoPage: React.FC = () => {
                 <div>
                   <div className="text-xs text-gray-500">Remote URL</div>
                   <div className="text-sm font-mono mt-1 break-all">
-                    <a 
-                      href={selectedCargo.remoteUrl} 
-                      target="_blank" 
+                    <a
+                      href={selectedCargo.remoteUrl}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline"
                     >
@@ -964,20 +1074,20 @@ const AdminCargoPage: React.FC = () => {
                   <span className="font-medium">No Delete:</span> {selectedCargo.properties?.noDelete ? 'Yes' : 'No'}
                 </div>
               </div>
-              
-              {selectedCargo.properties?.customProperties && 
+
+              {selectedCargo.properties?.customProperties &&
                 Object.keys(selectedCargo.properties.customProperties).length > 0 && (
-                <div>
-                  <div className="text-xs text-gray-500 mt-2">Custom Properties</div>
-                  <div className="space-y-1 mt-1">
-                    {Object.entries(selectedCargo.properties.customProperties).map(([key, value]) => (
-                      <div key={key} className="text-xs">
-                        <span className="font-medium">{key}:</span> {JSON.stringify(value)}
-                      </div>
-                    ))}
+                  <div>
+                    <div className="text-xs text-gray-500 mt-2">Custom Properties</div>
+                    <div className="space-y-1 mt-1">
+                      {Object.entries(selectedCargo.properties.customProperties).map(([key, value]) => (
+                        <div key={key} className="text-xs">
+                          <span className="font-medium">{key}:</span> {JSON.stringify(value)}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           </div>
 
@@ -985,14 +1095,14 @@ const AdminCargoPage: React.FC = () => {
           <div className="pt-4 border-t border-gray-100">
             <div className="text-xs font-medium text-gray-900 mb-3">Used In Containers</div>
             <div>
-              {containers.filter(container => 
+              {containers.filter(container =>
                 container.items.some(item => item.cargoId === selectedCargo.id)
               ).length > 0 ? (
                 <div className="space-y-2">
-                  {containers.filter(container => 
+                  {containers.filter(container =>
                     container.items.some(item => item.cargoId === selectedCargo.id)
                   ).map(container => (
-                    <div 
+                    <div
                       key={container.id}
                       className="flex justify-between items-center border border-gray-100 rounded p-2 hover:bg-gray-50 cursor-pointer"
                       onClick={() => {
@@ -1162,9 +1272,9 @@ const AdminCargoPage: React.FC = () => {
               <div className="space-y-3">
                 {selectedContainer.items.map((item, index) => {
                   const cargoItem = cargoItems.find(c => c.id === item.cargoId);
-                  
+
                   return (
-                    <div 
+                    <div
                       key={index}
                       className="border border-gray-100 rounded p-3 hover:bg-gray-50 cursor-pointer"
                       onClick={() => {
@@ -1187,8 +1297,8 @@ const AdminCargoPage: React.FC = () => {
                           <div className="text-xs font-mono mt-1">→ {item.targetPath}</div>
                           {cargoItem && (
                             <div className="text-xs text-gray-500 mt-1">
-                              {cargoItem.type === 'local' 
-                                ? `${formatFileSize(cargoItem.size || 0)} • ${cargoItem.mimeType}` 
+                              {cargoItem.type === 'local'
+                                ? `${formatFileSize(cargoItem.size || 0)} • ${cargoItem.mimeType}`
                                 : 'Remote URL'}
                             </div>
                           )}
@@ -1223,55 +1333,90 @@ const AdminCargoPage: React.FC = () => {
       </div>
     );
   };
-  
+
   // Main render
   if (loading) return <LoadingSpinner />;
-  
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminBar />
       <div className="p-6">
-        {/* Navigation tabs */}
-{/* Navigation tabs - Updated to match server list style */}
-<div className="border-b border-gray-200 mb-8">
-  <div className="flex">
-    <button
-      className={`pb-2 text-md font-medium relative ${
-        view.startsWith('cargo-')
-          ? 'text-gray-800 border-indigo-600'
-          : 'text-gray-500 hover:text-gray-700'
-      }`}
-      onClick={() => {
-        setView('cargo-list');
-        setSelectedCargo(null);
-        setSelectedContainer(null);
-      }}
-    >
-      All cargo <span className='text-gray-500 ml-0.5 mr-0.5'>{cargoItems.length}</span>
-      {view.startsWith('cargo-') && (
-        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600"></div>
-      )}
-    </button>
-    <button
-      className={`pb-2 ml-6 text-md font-medium relative ${
-        view.startsWith('container-')
-          ? 'text-gray-800 border-indigo-600'
-          : 'text-gray-500 hover:text-gray-700'
-      }`}
-      onClick={() => {
-        setView('container-list');
-        setSelectedCargo(null);
-        setSelectedContainer(null);
-      }}
-    >
-      Containers <span className='text-gray-500 ml-0.5 mr-0.5'>{containers.length}</span>
-      {view.startsWith('container-') && (
-        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600"></div>
-      )}
-    </button>
-  </div>
-</div>
-      
+        {/* Page Title and Create Button */}
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-gray-900">
+            {view.includes('cargo') ? 'Cargo Management' : 'Container Management'}
+          </h1>
+          <div className="flex items-center space-x-3">
+            {view.includes('cargo') ? (
+              <button
+                onClick={() => {
+                  resetCargoForm();
+                  setView('cargo-create');
+                }}
+                className="px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800"
+              >
+                Create Cargo
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  resetContainerForm();
+                  setView('container-create');
+                }}
+                className="px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800"
+              >
+                Create Container
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Navigation tabs with smooth animation */}
+        <div className="mb-6">
+          <div
+            ref={tabsContainerRef}
+            className="inline-flex p-1 space-x-1 bg-gray-100 rounded-lg relative"
+          >
+            {/* Animated indicator */}
+            <div
+              className="absolute transform transition-all duration-200 ease-spring bg-white rounded-md shadow-xs border border-gray-200/50 z-0"
+              style={{
+                width: `${indicatorStyle.width}px`,
+                height: `${indicatorStyle.height}px`,
+                top: `${indicatorStyle.top}px`,
+                left: `${indicatorStyle.left}px`,
+                opacity: indicatorStyle.opacity,
+                transitionDelay: '30ms',
+              }}
+            />
+
+            {/* Tab buttons */}
+            <TabButton
+              id="cargo"
+              isActive={view.startsWith('cargo-')}
+              onClick={() => {
+                setView('cargo-list');
+                setSelectedCargo(null);
+                setSelectedContainer(null);
+              }}
+            >
+              All cargo <span className='text-gray-500 ml-0.5'>{cargoItems.length}</span>
+            </TabButton>
+
+            <TabButton
+              id="container"
+              isActive={view.startsWith('container-')}
+              onClick={() => {
+                setView('container-list');
+                setSelectedCargo(null);
+                setSelectedContainer(null);
+              }}
+            >
+              Containers <span className='text-gray-500 ml-0.5'>{containers.length}</span>
+            </TabButton>
+          </div>
+        </div>
+
         {error && (
           <div className="bg-red-50 border border-red-100 rounded-md p-4 mb-6">
             <p className="text-sm text-red-600">{error}</p>
@@ -1281,23 +1426,6 @@ const AdminCargoPage: React.FC = () => {
         {/* Cargo Views */}
         {view === 'cargo-list' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">Cargo Items</h1>
-              </div>
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => {
-                    resetCargoForm();
-                    setView('cargo-create');
-                  }}
-                  className="px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800"
-                >
-                  Create Cargo
-                </button>
-              </div>
-            </div>
-
             <div className="space-y-2">
               {cargoItems.length > 0 ? (
                 cargoItems.map((cargo) => (
@@ -1319,8 +1447,8 @@ const AdminCargoPage: React.FC = () => {
                         <div className="flex-1">
                           <div className="text-sm font-medium text-gray-900">{cargo.name}</div>
                           <div className="text-xs text-gray-500 mt-1">
-                            {cargo.type === 'local' 
-                              ? `${formatFileSize(cargo.size || 0)} • ${cargo.mimeType}` 
+                            {cargo.type === 'local'
+                              ? `${formatFileSize(cargo.size || 0)} • ${cargo.mimeType}`
                               : cargo.remoteUrl}
                           </div>
                         </div>
@@ -1359,23 +1487,6 @@ const AdminCargoPage: React.FC = () => {
         {/* Container Views */}
         {view === 'container-list' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">Containers</h1>
-              </div>
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => {
-                    resetContainerForm();
-                    setView('container-create');
-                  }}
-                  className="px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-md hover:bg-gray-800"
-                >
-                  Create Container
-                </button>
-              </div>
-            </div>
-
             <div className="space-y-2">
               {containers.length > 0 ? (
                 containers.map((container) => (

@@ -7,12 +7,14 @@
     font-weight: 400;
     font-style: normal;
 }
+
 @font-face {
     font-family: 'Argon Sans';
     src: url('/semibold.woff2') format('woff2');
     font-weight: 600;
     font-style: normal;
 }
+
 @font-face {
     font-family: 'Argon Sans';
     src: url('/bold.woff2') format('woff2');
@@ -27,24 +29,28 @@
     font-weight: bold;
     font-style: normal;
 }
+
 @font-face {
     font-family: 'Coinbase Mono';
     src: url('/Coinbase_Mono-Extra_Light-web.woff2') format('woff2');
     font-weight: 200;
     font-style: normal;
 }
+
 @font-face {
     font-family: 'Coinbase Mono';
     src: url('/Coinbase_Mono-Light-web.woff2') format('woff2');
     font-weight: 300;
     font-style: normal;
 }
+
 @font-face {
     font-family: 'Coinbase Mono';
     src: url('/Coinbase_Mono-Medium-web.woff2') format('woff2');
     font-weight: 500;
     font-style: normal;
 }
+
 @font-face {
     font-family: 'Coinbase Mono';
     src: url('/Coinbase_Mono-Regular-web.woff2') format('woff2');
@@ -62,28 +68,86 @@
 }
 
 .font-normal {
-    font-weight: 200; /* Using regular weight for medium */
+    font-weight: 200;
+    /* Using regular weight for medium */
 }
 
 /* Font weight mappings */
 .font-medium {
-    font-weight: 400; /* Using regular weight for medium */
+    font-weight: 400;
+    /* Using regular weight for medium */
 }
 
 .font-semibold {
-    font-weight: 600; /* Using semibold weight */
+    font-weight: 600;
+    /* Using semibold weight */
 }
 
 .font-bold {
-    font-weight: 700; /* Using bold weight */
+    font-weight: 700;
+    /* Using bold weight */
 }
-  
-  /* Remove white flash on active/focus for tab buttons */
-  .tab-button:focus-visible {
+
+/* Animation styles */
+/* Custom optimized spring easing function */
+.ease-spring {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1.2);
+}
+
+/* Remove white flash on active/focus for tab buttons */
+.tab-button:focus-visible {
     outline: none;
     border-color: transparent;
-  }
-  
-  .tab-button {
+}
+
+.tab-button {
     -webkit-tap-highlight-color: transparent;
-  }
+}
+
+/* Animation keyframes */
+@keyframes scale-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes fade-in {
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes slide-in {
+    0% {
+        transform: translateX(20px);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Animation classes */
+.animate-scale-in {
+    animation: scale-in 0.15s ease-out forwards;
+}
+
+.animate-fade-in {
+    animation: fade-in 0.1s ease-out forwards;
+}
+
+.animate-slide-in {
+    animation: slide-in 0.2s ease-out forwards;
+}

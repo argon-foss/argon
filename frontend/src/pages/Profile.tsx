@@ -510,53 +510,6 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* CSS for animations */}
-      <style>{`
-        /* Custom optimized spring easing function */
-        .ease-spring { 
-          transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1.2); 
-        }
-        
-        /* Remove white flash on active/focus for tab buttons */
-        .tab-button:focus-visible {
-          outline: none;
-          border-color: transparent;
-        }
-        
-        .tab-button {
-          -webkit-tap-highlight-color: transparent;
-        }
-        
-        /* Animation keyframes */
-        @keyframes scale-in {
-          0% { opacity: 0; transform: scale(0.95); }
-          100% { opacity: 1; transform: scale(1); }
-        }
-        
-        @keyframes fade-in {
-          0% { opacity: 0; }
-          100% { opacity: 1; }
-        }
-        
-        @keyframes slide-in {
-          0% { transform: translateX(20px); opacity: 0; }
-          100% { transform: translateX(0); opacity: 1; }
-        }
-        
-        /* Animation classes */
-        .animate-scale-in {
-          animation: scale-in 0.15s ease-out forwards;
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 0.1s ease-out forwards;
-        }
-        
-        .animate-slide-in {
-          animation: slide-in 0.2s ease-out forwards;
-        }
-      `}</style>
     </div>
   );
 };
