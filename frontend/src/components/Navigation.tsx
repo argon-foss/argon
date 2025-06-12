@@ -15,7 +15,9 @@ import {
   HomeModernIcon,
   ArrowsPointingOutIcon,
   GlobeAmericasIcon,
-  AdjustmentsHorizontalIcon
+  AdjustmentsHorizontalIcon,
+  Bars3Icon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../pages/[auth]/Auth';
 //import { useSystem } from '../contexts/SystemContext';
@@ -100,7 +102,7 @@ const SidebarToggle: React.FC = () => {
     <Tooltip content={sidebarVisible ? "Hide sidebar" : "Show sidebar"}>
       <button
         onClick={toggleSidebar}
-        className="p-2 rounded-lg hover:border-transparent hover:bg-gray-200/50 active:scale-95 transition-all duration-200 ease-in-out"
+        className="hidden md:block p-2 rounded-lg hover:border-transparent hover:bg-gray-200/50 active:scale-95 transition-all duration-200 ease-in-out"
         aria-label={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
@@ -111,6 +113,25 @@ const SidebarToggle: React.FC = () => {
         </svg>
       </button>
     </Tooltip>
+  );
+};
+
+// Mobile Menu Toggle Component
+const MobileMenuToggle: React.FC = () => {
+  const { sidebarVisible, toggleSidebar } = useSidebar();
+
+  return (
+    <button
+      onClick={toggleSidebar}
+      className="md:hidden p-2 rounded-lg hover:border-transparent hover:bg-gray-200/50 active:scale-95 transition-all duration-200 ease-in-out"
+      aria-label={sidebarVisible ? "Close menu" : "Open menu"}
+    >
+      {sidebarVisible ? (
+        <XMarkIcon className="h-6 w-6 text-gray-400" />
+      ) : (
+        <Bars3Icon className="h-6 w-6 text-gray-400" />
+      )}
+    </button>
   );
 };
 
@@ -149,8 +170,9 @@ function Navbar() {
   const { sidebarVisible } = useSidebar();
 
   return (
-    <header className={`fixed top-0 ${sidebarVisible ? 'left-56' : 'left-0'} right-0 h-12 mt-1.5 ml-1 mr-2 rounded-lg bg-white/80 border border-gray-100 backdrop-blur flex items-center z-50 justify-between transition-all duration-300 ease-in-out`}>
+    <header className={`fixed top-0 ${sidebarVisible ? 'md:left-56' : 'left-0'} right-0 h-12 mt-1.5 ml-1 mr-2 rounded-lg bg-white/80 border border-gray-100 backdrop-blur flex items-center z-50 justify-between transition-all duration-300 ease-in-out`}>
       <div className="flex items-center ml-1.5">
+        <MobileMenuToggle />
         <SidebarToggle />
       </div>
 
@@ -201,6 +223,61 @@ function Navbar() {
     </header>
   );
 }
+
+// Enhanced Navigation Item component with ref forwarding
+const NavItem = ({
+  to,
+  icon: Icon,
+  label,
+  isActive,
+  setRef
+}: {
+  to: string;
+  icon: React.ElementType;
+  label: string;
+  isActive: boolean;
+  setRef: (id: string, element: HTMLAnchorElement | null) => void;
+}) => {
+  // Generate a consistent ID from the path
+  const id = to.replace(/\//g, '-').slice(1);
+
+  // Use useRef to maintain stability
+  const linkRef = useRef<HTMLAnchorElement>(null);
+
+  // Register the ref on mount only
+  useEffect(() => {
+    if (linkRef.current) {
+      setRef(id, linkRef.current);
+    }
+
+    return () => {
+      setRef(id, null);
+    };
+  }, [id, setRef]);
+
+  return (
+    <Link
+      to={to}
+      ref={linkRef}
+      className={`nav-link flex items-center h-8 ml-2 text-xs rounded-md font-light transition duration-300 relative z-10 outline-none focus:outline-none focus:ring-0 ${isActive
+        ? 'px-2 font-semibold text-white'
+        : 'border-none px-2 hover:text-white text-white/50'
+        }`}
+    >
+      <Icon strokeWidth="2" className={`mr-2 h-4 w-4 ${isActive ? 'text-white/60' : 'text-white/30'}`} />
+      <span className={`${['nodes', 'servers', 'projects', 'api keys'].includes(label.toLowerCase()) ? 'mt-[1.75px]' : ''}`}>{label}</span>
+    </Link>
+  );
+};
+
+// Section Header component
+const SectionHeader = ({ label }: { label: string }) => {
+  return (
+    <div className="px-4 pt-5 pb-1">
+      <h3 className="text-[0.6rem] font-semibold uppercase tracking-wider text-white/40">{label}</h3>
+    </div>
+  );
+};
 
 function Sidebar() {
   const location = useLocation();
@@ -288,242 +365,197 @@ function Sidebar() {
   }, []);
 
   return (
-    <div
-      className={`sidebar-container fixed inset-y-0 left-0 w-56 bg-[#101219] p-1 z-10 flex flex-col transform transition-transform duration-300 ease-in-out ${sidebarVisible ? 'translate-x-0' : '-translate-x-full'
+    <>
+      {/* Mobile overlay */}
+      {sidebarVisible && (
+        <div 
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-20 md:hidden"
+          onClick={() => useSidebar().toggleSidebar()}
+        />
+      )}
+      <div
+        className={`sidebar-container fixed inset-y-0 left-0 w-56 bg-[#101219] p-1 z-30 flex flex-col transform transition-transform duration-300 ease-in-out ${
+          sidebarVisible ? 'translate-x-0' : '-translate-x-full'
         }`}
-    >
-      {/* System Name */}
-      <div className="pt-3 flex items-center ml-2.5">
-        <ProjectSwitcher />
+      >
+        {/* System Name */}
+        <div className="pt-3 flex items-center ml-2.5">
+          <ProjectSwitcher />
+        </div>
+
+        {/* Main Navigation */}
+        <div className="flex-1 p-0.5 overflow-y-auto">
+          <nav className="p-1 mt-2 pr-3 space-y-0.5 relative">
+            {/* Animated background indicator */}
+            <div
+              className="absolute transform transition-all duration-200 ease-spring bg-[#383c47] rounded-md z-0"
+              style={{
+                width: `${indicatorStyle.width}px`,
+                height: `${indicatorStyle.height}px`,
+                top: `${indicatorStyle.top}px`,
+                left: `${indicatorStyle.left}px`,
+                opacity: indicatorStyle.opacity,
+                // Add a small delay to the background indicator to avoid flash
+                transitionDelay: '30ms',
+              }}
+            />
+
+            <NavItem
+              to="/servers"
+              icon={ServerStackIcon}
+              label="Servers"
+              isActive={location.pathname === '/servers'}
+              setRef={setTabRef}
+            />
+
+            <NavItem
+              to="/projects"
+              icon={FolderIcon}
+              label="Projects"
+              isActive={location.pathname === '/projects'}
+              setRef={setTabRef}
+            />
+
+            {/* Server Section - Only show when on a server page */}
+            {isServerPage && (
+              <>
+                <SectionHeader label="Server" />
+
+                <NavItem
+                  to={`/servers/${serverId}/console`}
+                  icon={CommandLineIcon}
+                  label="Console"
+                  isActive={location.pathname.endsWith('/console')}
+                  setRef={setTabRef}
+                />
+
+                <NavItem
+                  to={`/servers/${serverId}/files`}
+                  icon={FolderIcon}
+                  label="Files"
+                  isActive={location.pathname.endsWith('/files')}
+                  setRef={setTabRef}
+                />
+
+                <NavItem
+                  to={`/servers/${serverId}/startup`}
+                  icon={AdjustmentsHorizontalIcon}
+                  label="Startup"
+                  isActive={location.pathname.endsWith('/startup')}
+                  setRef={setTabRef}
+                />
+
+                <NavItem
+                  to={`/servers/${serverId}/settings`}
+                  icon={Cog6ToothIcon}
+                  label="Settings"
+                  isActive={location.pathname.endsWith('/settings')}
+                  setRef={setTabRef}
+                />
+              </>
+            )}
+
+            {/* Admin Section - Only show if user has admin permissions */}
+            {hasAdminPermission && (
+              <>
+                <SectionHeader label="Admin" />
+
+                <NavItem
+                  to="/admin"
+                  icon={HomeModernIcon}
+                  label="Overview"
+                  isActive={location.pathname === '/admin'}
+                  setRef={setTabRef}
+                />
+
+                <NavItem
+                  to="/admin/settings"
+                  icon={Cog6ToothIcon}
+                  label="Settings"
+                  isActive={location.pathname === '/admin/settings'}
+                  setRef={setTabRef}
+                />
+
+                <NavItem
+                  to="/admin/api-keys"
+                  icon={KeyIcon}
+                  label="API Keys"
+                  isActive={location.pathname === '/admin/api-keys'}
+                  setRef={setTabRef}
+                />
+
+                <NavItem
+                  to="/admin/servers"
+                  icon={ServerIcon}
+                  label="Servers"
+                  isActive={location.pathname === '/admin/servers'}
+                  setRef={setTabRef}
+                />
+
+                <NavItem
+                  to="/admin/regions"
+                  icon={GlobeAmericasIcon}
+                  label="Regions"
+                  isActive={location.pathname === '/admin/regions'}
+                  setRef={setTabRef}
+                />
+
+                <NavItem
+                  to="/admin/nodes"
+                  icon={CubeIcon}
+                  label="Nodes"
+                  isActive={location.pathname === '/admin/nodes'}
+                  setRef={setTabRef}
+                />
+
+                <NavItem
+                  to="/admin/users"
+                  icon={UsersIcon}
+                  label="Users"
+                  isActive={location.pathname === '/admin/users'}
+                  setRef={setTabRef}
+                />
+
+                <NavItem
+                  to="/admin/units"
+                  icon={ArchiveBoxIcon}
+                  label="Units"
+                  isActive={location.pathname === '/admin/units'}
+                  setRef={setTabRef}
+                />
+
+                <NavItem
+                  to="/admin/cargo"
+                  icon={ArrowsPointingOutIcon}
+                  label="Cargo"
+                  isActive={location.pathname === '/admin/cargo'}
+                  setRef={setTabRef}
+                />
+              </>
+            )}
+          </nav>
+        </div>
+
+        {/* Logout at bottom */}
+        <div className="p-6">
+          <Link
+            to="https://github.com/argon-foss"
+            className="inline-flex text-xs items-center text-gray-500 transition hover:text-gray-300 border-b border-gray-800 pb-1"
+          >
+            Powered by Argon
+            <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </Link>
+        </div>
       </div>
-
-      {/* Main Navigation */}
-      <div className="flex-1 p-0.5 overflow-y-auto">
-        <nav className="p-1 mt-2 pr-3 space-y-0.5 relative">
-          {/* Animated background indicator */}
-          <div
-            className="absolute transform transition-all duration-200 ease-spring bg-[#383c47] rounded-md z-0"
-            style={{
-              width: `${indicatorStyle.width}px`,
-              height: `${indicatorStyle.height}px`,
-              top: `${indicatorStyle.top}px`,
-              left: `${indicatorStyle.left}px`,
-              opacity: indicatorStyle.opacity,
-              // Add a small delay to the background indicator to avoid flash
-              transitionDelay: '30ms',
-            }}
-          />
-
-          <NavItem
-            to="/servers"
-            icon={ServerStackIcon}
-            label="Servers"
-            isActive={location.pathname === '/servers'}
-            setRef={setTabRef}
-          />
-
-          <NavItem
-            to="/projects"
-            icon={FolderIcon}
-            label="Projects"
-            isActive={location.pathname === '/projects'}
-            setRef={setTabRef}
-          />
-
-          {/* Server Section - Only show when on a server page */}
-          {isServerPage && (
-            <>
-              <SectionHeader label="Server" />
-
-              <NavItem
-                to={`/servers/${serverId}/console`}
-                icon={CommandLineIcon}
-                label="Console"
-                isActive={location.pathname.endsWith('/console')}
-                setRef={setTabRef}
-              />
-
-              <NavItem
-                to={`/servers/${serverId}/files`}
-                icon={FolderIcon}
-                label="Files"
-                isActive={location.pathname.endsWith('/files')}
-                setRef={setTabRef}
-              />
-
-              <NavItem
-                to={`/servers/${serverId}/startup`}
-                icon={AdjustmentsHorizontalIcon}
-                label="Startup"
-                isActive={location.pathname.endsWith('/startup')}
-                setRef={setTabRef}
-              />
-
-              <NavItem
-                to={`/servers/${serverId}/settings`}
-                icon={Cog6ToothIcon}
-                label="Settings"
-                isActive={location.pathname.endsWith('/settings')}
-                setRef={setTabRef}
-              />
-            </>
-          )}
-
-          {/* Admin Section - Only show if user has admin permissions */}
-          {hasAdminPermission && (
-            <>
-              <SectionHeader label="Admin" />
-
-              <NavItem
-                to="/admin"
-                icon={HomeModernIcon}
-                label="Overview"
-                isActive={location.pathname === '/admin'}
-                setRef={setTabRef}
-              />
-
-              <NavItem
-                to="/admin/settings"
-                icon={Cog6ToothIcon}
-                label="Settings"
-                isActive={location.pathname === '/admin/settings'}
-                setRef={setTabRef}
-              />
-
-              <NavItem
-                to="/admin/api-keys"
-                icon={KeyIcon}
-                label="API Keys"
-                isActive={location.pathname === '/admin/api-keys'}
-                setRef={setTabRef}
-              />
-
-              <NavItem
-                to="/admin/servers"
-                icon={ServerIcon}
-                label="Servers"
-                isActive={location.pathname === '/admin/servers'}
-                setRef={setTabRef}
-              />
-
-              <NavItem
-                to="/admin/regions"
-                icon={GlobeAmericasIcon}
-                label="Regions"
-                isActive={location.pathname === '/admin/regions'}
-                setRef={setTabRef}
-              />
-
-              <NavItem
-                to="/admin/nodes"
-                icon={CubeIcon}
-                label="Nodes"
-                isActive={location.pathname === '/admin/nodes'}
-                setRef={setTabRef}
-              />
-
-              <NavItem
-                to="/admin/users"
-                icon={UsersIcon}
-                label="Users"
-                isActive={location.pathname === '/admin/users'}
-                setRef={setTabRef}
-              />
-
-              <NavItem
-                to="/admin/units"
-                icon={ArchiveBoxIcon}
-                label="Units"
-                isActive={location.pathname === '/admin/units'}
-                setRef={setTabRef}
-              />
-
-              <NavItem
-                to="/admin/cargo"
-                icon={ArrowsPointingOutIcon}
-                label="Cargo"
-                isActive={location.pathname === '/admin/cargo'}
-                setRef={setTabRef}
-              />
-            </>
-          )}
-        </nav>
-      </div>
-
-      {/* Logout at bottom */}
-      <div className="p-6">
-        <Link
-          to="https://github.com/argon-foss"
-          className="inline-flex text-xs items-center text-gray-500 transition hover:text-gray-300 border-b border-gray-800 pb-1"
-        >
-          Powered by Argon
-          <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-        </Link>
-      </div>
-    </div>
+    </>
   );
 }
 
 // Custom spring easing function for index.css
 // Add this to your global CSS:
 // .ease-spring { transition-timing-function: cubic-bezier(0.5, 0, 0.2, 1.4); }
-
-// Enhanced Navigation Item component with ref forwarding
-const NavItem = ({
-  to,
-  icon: Icon,
-  label,
-  isActive,
-  setRef
-}: {
-  to: string;
-  icon: React.ElementType;
-  label: string;
-  isActive: boolean;
-  setRef: (id: string, element: HTMLAnchorElement | null) => void;
-}) => {
-  // Generate a consistent ID from the path
-  const id = to.replace(/\//g, '-').slice(1);
-
-  // Use useRef to maintain stability
-  const linkRef = useRef<HTMLAnchorElement>(null);
-
-  // Register the ref on mount only
-  useEffect(() => {
-    if (linkRef.current) {
-      setRef(id, linkRef.current);
-    }
-
-    return () => {
-      setRef(id, null);
-    };
-  }, [id, setRef]);
-
-  return (
-    <Link
-      to={to}
-      ref={linkRef}
-      className={`nav-link flex items-center h-8 ml-2 text-xs rounded-md font-light transition duration-300 relative z-10 outline-none focus:outline-none focus:ring-0 ${isActive
-        ? 'px-2 font-semibold text-white'
-        : 'border-none px-2 hover:text-white text-white/50'
-        }`}
-    >
-      <Icon strokeWidth="2" className={`mr-2 h-4 w-4 ${isActive ? 'text-white/60' : 'text-white/30'}`} />
-      <span className={`${['nodes', 'servers', 'projects', 'api keys'].includes(label.toLowerCase()) ? 'mt-[1.75px]' : ''}`}>{label}</span>
-    </Link>
-  );
-};
-
-// Section Header component
-const SectionHeader = ({ label }: { label: string }) => {
-  return (
-    <div className="px-4 pt-5 pb-1">
-      <h3 className="text-[0.6rem] font-semibold uppercase tracking-wider text-white/40">{label}</h3>
-    </div>
-  );
-};
 
 // Re-export both components for convenience
 export { Navbar, Sidebar, SidebarProvider };

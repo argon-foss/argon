@@ -44,7 +44,7 @@ const ServerSettings = lazy(() => import('./pages/[server]/Settings'));
   -----
   
   Argon 1.0 (Revenant)
-  2025 (c) ether and contributors
+  2025 (c) ether, and contributors
 
 */}
 
