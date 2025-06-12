@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   EyeIcon,
   EyeSlashIcon
@@ -162,38 +163,28 @@ export const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      {/* Left panel */}
-      <div className="w-2/5 bg-[#101219] p-10 flex flex-col justify-center">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-white">{systemName}</h1>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="min-h-screen flex items-center justify-center bg-[#f9fafb] p-6"
+    >
+      <motion.div 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.3 }}
+        className="w-full max-w-md"
+      >
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-semibold text-gray-800">{systemName}</h1>
         </div>
 
-        <div className="my-6">
-          <h2 className="text-2xl font-semibold text-white">
-            Welcome back!
-          </h2>
-          <p className="text-lg text-gray-500 mt-2">
-            We are glad to see you again.
-          </p>
-        </div>
-
-        <div className="mt-8">
-          <Link
-            to="https://github.com/argon-foss"
-            className="inline-flex items-center text-gray-500 hover:text-gray-300 border-b border-gray-500 pb-1"
-          >
-            Powered by {systemName}
-            <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </Link>
-        </div>
-      </div>
-
-      {/* Right panel */}
-      <div className="w-3/5 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-xs p-8 w-full max-w-md border border-gray-200/50">
+        <motion.div 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.3 }}
+          className="bg-white rounded-lg shadow-xs p-8 border border-gray-200/50"
+        >
           <h2 className="text-2xl font-semibold text-gray-800 mb-1">
             Sign in
           </h2>
@@ -203,9 +194,13 @@ export const AuthPage: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="px-3 py-2 rounded-md bg-red-50 border border-red-100">
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="px-3 py-2 rounded-md bg-red-50 border border-red-100"
+              >
                 <p className="text-sm text-red-600">{error}</p>
-              </div>
+              </motion.div>
             )}
 
             <div>
@@ -217,10 +212,7 @@ export const AuthPage: React.FC = () => {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="block w-full px-3 py-2 rounded-md bg-white border border-gray-200 
-                         text-sm text-gray-700
-                         focus:outline-none focus:ring-1 focus:ring-gray-200 focus:border-gray-300 
-                         transition-colors duration-200"
+                className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
                 placeholder="username@example.com"
                 required
               />
@@ -236,35 +228,28 @@ export const AuthPage: React.FC = () => {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full px-3 py-2 rounded-md bg-white border border-gray-200 
-                           text-sm text-gray-700
-                           focus:outline-none focus:ring-1 focus:ring-gray-200 focus:border-gray-300
-                           transition-colors duration-200"
+                  className="block w-full px-3 py-2 text-xs border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
                   placeholder="*********"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-200"
                 >
                   {showPassword ? (
-                    <EyeSlashIcon className="h-4 w-4 text-gray-400" />
+                    <EyeSlashIcon className="h-4 w-4" />
                   ) : (
-                    <EyeIcon className="h-4 w-4 text-gray-400" />
+                    <EyeIcon className="h-4 w-4" />
                   )}
                 </button>
               </div>
             </div>
 
-            <button
+            <motion.button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-b from-white to-gray-100 shadow-xs border border-gray-200 text-sm font-medium text-gray-800
-                       py-2 px-3 rounded-lg
-                       hover:bg-indigo-200 
-                       focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600
-                       transition active:scale-95 duration-200 flex items-center justify-center"
+              className="w-full flex items-center justify-center border border-gray-300/50 rounded-lg px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition duration-150"
             >
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-gray-300
@@ -272,16 +257,28 @@ export const AuthPage: React.FC = () => {
               ) : (
                 'Continue'
               )}
-            </button>
+            </motion.button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 hover:text-gray-700 transition-colors duration-200 cursor-pointer">
               Forgot password
             </p>
           </div>
+        </motion.div>
+
+        <div className="mt-6 text-center">
+          <Link
+            to="https://github.com/argon-foss"
+            className="inline-flex items-center text-gray-500 hover:text-gray-700 border-b border-gray-200 hover:border-gray-400 pb-1 transition-colors duration-200"
+          >
+            Powered by {systemName}
+            <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </Link>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
