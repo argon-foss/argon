@@ -247,9 +247,11 @@ export const AuthPage: React.FC = () => {
             </div>
 
             <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center border border-gray-300/50 rounded-lg px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition duration-150"
+              className="flex items-center w-full text-center justify-center px-4 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors duration-150"
             >
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-gray-300
