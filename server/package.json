@@ -1,6 +1,6 @@
 {
   "name": "argon-api",
-  "author": "Octant, Inc.",
+  "author": "Webwise Technologies",
   "version": "1.0.0",
   "bin": {
     "argon": "./src/cli/cli.ts"
